@@ -1,10 +1,44 @@
 # ui/navigation_bar.py
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFrame, QSizePolicy
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFrame, QSizePolicy, QLabel, QGraphicsOpacityEffect
+from PySide6.QtCore import Qt, Signal, QSize, QPropertyAnimation, QEasingCurve, QAbstractAnimation
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QFont, QColor
 import os
+from core import config
 from core.config import ICON_DIR
 from loguru import logger
+
+class SyncStatusWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(10, 0, 10, 0)
+        
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet("color: white; font-weight: bold;")
+        
+        if config.IS_PREMIUM:
+            self.pulse_icon = QLabel("●") # Dot character
+            self.pulse_icon.setStyleSheet("color: #4CAF50; font-size: 16px;")
+            
+            # Pulse Animation
+            self.opacity_effect = QGraphicsOpacityEffect(self.pulse_icon)
+            self.pulse_icon.setGraphicsEffect(self.opacity_effect)
+            
+            self.anim = QPropertyAnimation(self.opacity_effect, b"opacity")
+            self.anim.setDuration(1000)
+            self.anim.setStartValue(1.0)
+            self.anim.setEndValue(0.3)
+            self.anim.setEasingCurve(QEasingCurve.InOutQuad)
+            self.anim.setLoopCount(-1) # Infinite loop
+            self.anim.start()
+            
+            self.status_label.setText("Sync Active")
+            self.layout.addWidget(self.pulse_icon)
+        else:
+            self.status_label.setText("Basic Mode")
+            self.status_label.setStyleSheet("color: #B0BEC5;")
+            
+        self.layout.addWidget(self.status_label)
 
 class NavButton(QPushButton):
     """Custom navigation button with pill shape and PNG icon"""
@@ -124,6 +158,11 @@ class MainNavigationBar(QFrame):
             btn.clicked.connect(lambda checked=False, b_id=btn_id: self.on_btn_clicked(b_id))
             self.container_layout.addWidget(btn)
             self.buttons.append(btn)
+            
+        # Add Sync Status Widget
+        self.container_layout.addStretch()
+        self.sync_status = SyncStatusWidget()
+        self.container_layout.addWidget(self.sync_status)
             
     def on_btn_clicked(self, btn_id):
         self.set_active_btn(btn_id)

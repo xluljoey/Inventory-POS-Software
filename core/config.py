@@ -5,6 +5,7 @@ import sys
 APP_MODE = os.getenv("APP_MODE", "BASIC") 
 
 IS_PREMIUM = APP_MODE == "PREMIUM"
+CLOUD_SYNC_ENABLED = IS_PREMIUM
 
 FEATURES = {
     "google_drive_backup": True,
