@@ -1,0 +1,68 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches:
+      - main
+      - premium-sync
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ github.ref_name }} Version
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Verify Assets
+      run: |
+        if (!(Test-Path -Path "assets")) {
+          Write-Host "Warning: assets directory not found in repository!"
+          # Create dummy assets to prevent build failure if testing without them
+          New-Item -ItemType Directory -Force -Path "assets/icons"
+        }
+
+    - name: Configure Premium Mode
+      if: github.ref == 'refs/heads/premium-sync'
+      run: |
+        # Hardcode APP_MODE to PREMIUM for the build
+        (Get-Content core/config.py) -replace 'APP_MODE = os.getenv\("APP_MODE", "BASIC"\)', 'APP_MODE = "PREMIUM"' | Set-Content core/config.py
+        echo "EXE_NAME=Inventory_Premium_Sync" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
+    - name: Configure Basic Mode
+      if: github.ref != 'refs/heads/premium-sync'
+      run: |
+        # Explicitly set to BASIC
+        (Get-Content core/config.py) -replace 'APP_MODE = os.getenv\("APP_MODE", "BASIC"\)', 'APP_MODE = "BASIC"' | Set-Content core/config.py
+        echo "EXE_NAME=Inventory_Basic" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
+    - name: Build with PyInstaller
+      run: |
+        # --add-data usage: "source;dest" on Windows
+        pyinstaller --noconfirm --onefile --windowed --name "${{ env.EXE_NAME }}" `
+          --add-data "assets;assets" `
+          --add-data "styles.qss;." `
+          --hidden-import "PySide6" `
+          --clean `
+          main.py
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.EXE_NAME }}
+        path: dist/${{ env.EXE_NAME }}.exe
+        retention-days: 5

@@ -1,0 +1,25 @@
+# Database & Backups
+*.db
+*.bak
+token.json
+credentials.json
+
+# PySide6/Qt Specific
+*.pyui
+*.qrc
+# If you use a virtual environment
+venv/
+.env
+venv311/
+*.db
+credentials.json
+token.json
+__pycache__/
+*.log
+logs/
+*.txt
+debug_*.py
+strace.log
+sys_env.txt
+venv_env.txt
+nav_test.png
