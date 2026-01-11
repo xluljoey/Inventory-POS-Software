@@ -1,43 +1,36 @@
-name: Build Premium Windows Executable
+name: Build Windows Executable
 
 on:
   push:
     branches:
       - premium-sync
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
 
-    - name: Build with PyInstaller
-      run: |
-        pyinstaller --noconfirm --onefile --windowed `
-          --name "Inventory_Premium_Sync" `
-          --add-data "assets;assets" `
-          --add-data "ui;ui" `
-          --add-data "core;core" `
-          --add-data "database;database" `
-          --add-data "services;services" `
-          --hidden-import "PySide6" `
-          main.py
+      - name: Build EXE
+        run: |
+          pyinstaller --noconsole --onefile --add-data "assets;assets" --add-data "ui;ui" --name Inventory_Premium_Sync main.py
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Inventory_Premium_Sync_EXE
-        path: dist/Inventory_Premium_Sync.exe
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Premium-Windows-Build
+          path: dist/Inventory_Premium_Sync.exe# Triggering fresh build after public switch
