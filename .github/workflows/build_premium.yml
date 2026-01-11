@@ -34,3 +34,4 @@ jobs:
         with:
           name: Premium-Windows-Build
           path: dist/Inventory_Premium_Sync.exe# Triggering fresh build after public switch
+# Fresh build for public repository
