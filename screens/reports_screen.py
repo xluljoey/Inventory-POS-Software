@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QTableWidgetItem, QComboBox, QHeaderView, 
                                QAbstractItemView, QGroupBox, QDateEdit,
                                QCalendarWidget, QTabWidget, QMessageBox, QFileDialog,
-                               QStackedWidget)
+                               QStackedWidget, QSizePolicy, QSpacerItem) # Added QSizePolicy, QSpacerItem
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor
 from loguru import logger
@@ -192,26 +192,35 @@ class ReportsScreen(QWidget):
         return export_group
 
     def create_summary_card(self, title, value, color):
-        """Original Summary Card Design restored - Unified Standard"""
+        """Standardized Summary Card Design for all reports"""
         card = QFrame()
         card.setObjectName("summaryCard")
-        card.setStyleSheet(f"QFrame#summaryCard {{ background-color: {color}; border-radius: 10px; border: none; }}")
+        # Apply style directly to QWidget for padding and border-radius
+        card.setStyleSheet(f"""
+            QFrame#summaryCard {{ 
+                background-color: {color}; 
+                border-radius: 10px; 
+                border: none;
+            }}
+        """)
         
         layout = QVBoxLayout(card)
         layout.setContentsMargins(10, 2, 10, 2) # Minimal top/bottom padding
         layout.setSpacing(0) # No spacing between title and value
-        card.setFixedHeight(75) # Half-Height target
+        card.setFixedSize(200, 85) # Fixed width and height for perfect symmetry
         
         title_label = QLabel(title)
-        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 9px; font-weight: bold;") # Set font size to 9pt, bold
+        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 10pt; font-weight: bold;") # Set font size to 10pt, bold
+        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter) # Left align
         layout.addWidget(title_label)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet("color: white; font-size: 12px; font-weight: bold;") # Set font size to 12pt, bold
+        value_label.setStyleSheet("color: white; font-size: 15pt; font-weight: bolder;") # Set font size to 15pt, extra bold
         value_label.setObjectName("value_label")
+        value_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter) # Left align
         layout.addWidget(value_label)
         
-        layout.addStretch()
+        layout.addStretch() # Push content to top
         card.value_label = value_label
         return card
 
@@ -237,30 +246,30 @@ class ReportsScreen(QWidget):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
-        layout.setSpacing(5) # Global layout priority spacing
+        layout.setSpacing(10) # Global layout priority spacing
         
-        card_container = QFrame()
-        card_container_layout = QHBoxLayout(card_container)
-        card_container_layout.setContentsMargins(0,0,0,0)
-        card_container_layout.setSpacing(10) # Unified spacing between cards
-        card_container.setFixedHeight(90) # Fixed height for card container
+        card_grid_container = QFrame() # New container for the grid layout
+        card_grid_layout = QGridLayout(card_grid_container) # Use QGridLayout
+        card_grid_layout.setContentsMargins(0,0,0,0)
+        card_grid_layout.setSpacing(15) # Spacing between cards
+        card_grid_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
-        card_container_layout.addWidget(self.total_sales_card)
+        card_grid_layout.addWidget(self.total_sales_card, 0, 0)
         
         self.total_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
-        card_container_layout.addWidget(self.total_transactions_card)
+        card_grid_layout.addWidget(self.total_transactions_card, 0, 1)
         
         self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
-        card_container_layout.addWidget(self.avg_transaction_card)
+        card_grid_layout.addWidget(self.avg_transaction_card, 0, 2)
         
         self.top_product_card = self.create_summary_card("Top Product", "N/A", "#9c27b0")
-        card_container_layout.addWidget(self.top_product_card)
+        card_grid_layout.addWidget(self.top_product_card, 0, 3)
         
-        card_container_layout.addStretch()
-        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        # Add horizontalSpacer at the end of the grid row
+        card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 4)
         
-        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        layout.addWidget(card_grid_container, 0) # Cards container gets 0 stretch
         
         self.sales_table_stack = QStackedWidget()
         self.sales_empty_state = EmptyStateWidget(icon="📊", message="No sales data found for the selected period.")
@@ -278,30 +287,29 @@ class ReportsScreen(QWidget):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
-        layout.setSpacing(5) # Global layout priority spacing
+        layout.setSpacing(10) # Global layout priority spacing
         
-        card_container = QFrame()
-        card_container_layout = QHBoxLayout(card_container)
-        card_container_layout.setContentsMargins(0,0,0,0)
-        card_container_layout.setSpacing(10) # Unified spacing between cards
-        card_container.setFixedHeight(90) # Fixed height for card container
+        card_grid_container = QFrame() # New container for the grid layout
+        card_grid_layout = QGridLayout(card_grid_container) # Use QGridLayout
+        card_grid_layout.setContentsMargins(0,0,0,0)
+        card_grid_layout.setSpacing(15) # Spacing between cards
+        card_grid_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_products_card = self.create_summary_card("Total", "0", "#1976d2")
-        card_container_layout.addWidget(self.total_products_card)
+        card_grid_layout.addWidget(self.total_products_card, 0, 0)
         
         self.low_stock_card = self.create_summary_card("Low Stock", "0", "#ff9800")
-        card_container_layout.addWidget(self.low_stock_card)
+        card_grid_layout.addWidget(self.low_stock_card, 0, 1)
         
         self.out_of_stock_card = self.create_summary_card("Out of Stock", "0", "#f44336")
-        card_container_layout.addWidget(self.out_of_stock_card)
+        card_grid_layout.addWidget(self.out_of_stock_card, 0, 2)
         
         self.total_value_card = self.create_summary_card("Total Value", "GH₵0.00", "#4caf50")
-        card_container_layout.addWidget(self.total_value_card)
+        card_grid_layout.addWidget(self.total_value_card, 0, 3)
         
-        card_container_layout.addStretch()
-        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 4)
         
-        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        layout.addWidget(card_grid_container, 0) # Cards container gets 0 stretch
         
         self.inventory_table_stack = QStackedWidget()
         self.inventory_empty_state = EmptyStateWidget(icon="📦", message="No inventory data found for the selected period.")
@@ -318,30 +326,29 @@ class ReportsScreen(QWidget):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
-        layout.setSpacing(5) # Global layout priority spacing
+        layout.setSpacing(10) # Global layout priority spacing
         
-        card_container = QFrame()
-        card_container_layout = QHBoxLayout(card_container)
-        card_container_layout.setContentsMargins(0,0,0,0)
-        card_container_layout.setSpacing(10) # Unified spacing between cards
-        card_container.setFixedHeight(90) # Fixed height for card container
+        card_grid_container = QFrame() # New container for the grid layout
+        card_grid_layout = QGridLayout(card_grid_container) # Use QGridLayout
+        card_grid_layout.setContentsMargins(0,0,0,0)
+        card_grid_layout.setSpacing(15) # Spacing between cards
+        card_grid_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_customers_card = self.create_summary_card("Total Customers", "0", "#1976d2")
-        card_container_layout.addWidget(self.total_customers_card)
+        card_grid_layout.addWidget(self.total_customers_card, 0, 0)
         
         self.active_customers_card = self.create_summary_card("Active", "0", "#4caf50")
-        card_container_layout.addWidget(self.active_customers_card)
+        card_grid_layout.addWidget(self.active_customers_card, 0, 1)
         
         self.credit_customers_card = self.create_summary_card("Credit Customers", "0", "#ff9800")
-        card_container_layout.addWidget(self.credit_customers_card)
+        card_grid_layout.addWidget(self.credit_customers_card, 0, 2)
         
         self.overdue_accounts_card = self.create_summary_card("Overdue Accounts", "0", "#f44336")
-        card_container_layout.addWidget(self.overdue_accounts_card)
+        card_grid_layout.addWidget(self.overdue_accounts_card, 0, 3)
         
-        card_container_layout.addStretch()
-        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 4)
         
-        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        layout.addWidget(card_grid_container, 0) # Cards container gets 0 stretch
         
         self.customer_table_stack = QStackedWidget()
         self.customer_empty_state = EmptyStateWidget(icon="👥", message="No customer data found.")
@@ -358,30 +365,29 @@ class ReportsScreen(QWidget):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
-        layout.setSpacing(5) # Global layout priority spacing
+        layout.setSpacing(10) # Global layout priority spacing
         
-        card_container = QFrame()
-        card_container_layout = QHBoxLayout(card_container)
-        card_container_layout.setContentsMargins(0,0,0,0)
-        card_container_layout.setSpacing(10) # Unified spacing between cards
-        card_container.setFixedHeight(90) # Fixed height for card container
+        card_grid_container = QFrame() # New container for the grid layout
+        card_grid_layout = QGridLayout(card_grid_container) # Use QGridLayout
+        card_grid_layout.setContentsMargins(0,0,0,0)
+        card_grid_layout.setSpacing(15) # Spacing between cards
+        card_grid_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_revenue_card = self.create_summary_card("Total Revenue", "GH₵0.00", "#4caf50")
-        card_container_layout.addWidget(self.total_revenue_card)
+        card_grid_layout.addWidget(self.total_revenue_card, 0, 0)
         
         self.total_costs_card = self.create_summary_card("Total Costs", "GH₵0.00", "#f44336")
-        card_container_layout.addWidget(self.total_costs_card)
+        card_grid_layout.addWidget(self.total_costs_card, 0, 1)
         
         self.total_profit_card = self.create_summary_card("Total Profit", "GH₵0.00", "#9c27b0")
-        card_container_layout.addWidget(self.total_profit_card)
+        card_grid_layout.addWidget(self.total_profit_card, 0, 2)
         
         self.profit_margin_card = self.create_summary_card("Profit Margin", "0%", "#ff9800")
-        card_container_layout.addWidget(self.profit_margin_card)
+        card_grid_layout.addWidget(self.profit_margin_card, 0, 3)
         
-        card_container_layout.addStretch()
-        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 4)
         
-        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        layout.addWidget(card_grid_container, 0) # Cards container gets 0 stretch
         
         self.financial_table_stack = QStackedWidget()
         self.financial_empty_state = EmptyStateWidget(icon="💸", message="No financial data found for the selected period.")
@@ -398,30 +404,29 @@ class ReportsScreen(QWidget):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
-        layout.setSpacing(5) # Global layout priority spacing
+        layout.setSpacing(10) # Global layout priority spacing
         
-        card_container = QFrame()
-        card_container_layout = QHBoxLayout(card_container)
-        card_container_layout.setContentsMargins(0,0,0,0)
-        card_container_layout.setSpacing(10) # Unified spacing between cards
-        card_container.setFixedHeight(90) # Fixed height for card container
+        card_grid_container = QFrame() # New container for the grid layout
+        card_grid_layout = QGridLayout(card_grid_container) # Use QGridLayout
+        card_grid_layout.setContentsMargins(0,0,0,0)
+        card_grid_layout.setSpacing(15) # Spacing between cards
+        card_grid_container.setFixedHeight(90) # Fixed height for card container
         
         self.daily_total_sales_card = self.create_summary_card("Today's Revenue", "GH₵0.00", "#4caf50")
-        card_container_layout.addWidget(self.daily_total_sales_card)
+        card_grid_layout.addWidget(self.daily_total_sales_card, 0, 0)
         
         self.daily_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
-        card_container_layout.addWidget(self.daily_transactions_card)
+        card_grid_layout.addWidget(self.daily_transactions_card, 0, 1)
         
         self.daily_avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
-        card_container_layout.addWidget(self.daily_avg_transaction_card)
+        card_grid_layout.addWidget(self.daily_avg_transaction_card, 0, 2)
         
         self.daily_customers_card = self.create_summary_card("Customers", "0", "#9c27b0")
-        card_container_layout.addWidget(self.daily_customers_card)
+        card_grid_layout.addWidget(self.daily_customers_card, 0, 3)
         
-        card_container_layout.addStretch()
-        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 4)
         
-        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        layout.addWidget(card_grid_container, 0) # Cards container gets 0 stretch
         
         self.daily_sales_table_stack = QStackedWidget()
         self.daily_sales_empty_state = EmptyStateWidget(icon="📅", message="No daily sales data found for today.")
@@ -438,27 +443,26 @@ class ReportsScreen(QWidget):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
-        layout.setSpacing(5) # Global layout priority spacing
+        layout.setSpacing(10) # Global layout priority spacing
         
-        card_container = QFrame()
-        card_container_layout = QHBoxLayout(card_container)
-        card_container_layout.setContentsMargins(0,0,0,0)
-        card_container_layout.setSpacing(10) # Unified spacing between cards
-        card_container.setFixedHeight(90) # Fixed height for card container
+        card_grid_container = QFrame() # New container for the grid layout
+        card_grid_layout = QGridLayout(card_grid_container) # Use QGridLayout
+        card_grid_layout.setContentsMargins(0,0,0,0)
+        card_grid_layout.setSpacing(15) # Spacing between cards
+        card_grid_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_arrivals_card = self.create_summary_card("Total Arrivals", "0", "#4caf50")
-        card_container_layout.addWidget(self.total_arrivals_card)
+        card_grid_layout.addWidget(self.total_arrivals_card, 0, 0)
         
         self.total_restocked_qty_card = self.create_summary_card("Total Qty Added", "0", "#1976d2")
-        card_container_layout.addWidget(self.total_restocked_qty_card)
+        card_grid_layout.addWidget(self.total_restocked_qty_card, 0, 1)
         
         self.unique_products_restocked_card = self.create_summary_card("Products Restocked", "0", "#ff9800")
-        card_container_layout.addWidget(self.unique_products_restocked_card)
+        card_grid_layout.addWidget(self.unique_products_restocked_card, 0, 2)
         
-        card_container_layout.addStretch()
-        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 3) # Added spacer, adjust col index
         
-        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        layout.addWidget(card_grid_container, 0) # Cards container gets 0 stretch
         
         self.stock_audit_table_stack = QStackedWidget()
         self.stock_audit_empty_state = EmptyStateWidget(icon="📋", message="No stock audit entries found for the selected period.")
