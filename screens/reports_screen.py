@@ -248,16 +248,20 @@ class ReportsScreen(QWidget):
 
         self.sales_table = QTableWidget()
         self.sales_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.sales_table.setShowGrid(False)
-        self.sales_table.setMinimumHeight(700)
         self.sales_table.setColumnCount(7)
         self.sales_table.setHorizontalHeaderLabels(["Date", "Product", "Quantity", "Unit Price", "Total (Paid)", "Customer", "Cashier"])
         self.sales_table.setAlternatingRowColors(True)
-        self.sales_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
         self.sales_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.sales_table.setSortingEnabled(True)
+        self.sales_table.verticalHeader().setVisible(False) # Add this
+        self.sales_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.sales_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
         
         self.sales_table_stack.addWidget(self.sales_table)
         self.sales_table_stack.addWidget(self.sales_empty_state)
@@ -298,16 +302,20 @@ class ReportsScreen(QWidget):
 
         self.inventory_table = QTableWidget()
         self.inventory_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.inventory_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.inventory_table.setShowGrid(False)
-        self.inventory_table.setMinimumHeight(700)
         self.inventory_table.setColumnCount(8)
         self.inventory_table.setHorizontalHeaderLabels(["Product", "SKU", "Category", "Quantity", "Cost", "Price", "Value", "Status"])
         self.inventory_table.setAlternatingRowColors(True)
-        self.inventory_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.inventory_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
         self.inventory_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.inventory_table.setSortingEnabled(True)
+        self.inventory_table.verticalHeader().setVisible(False) # Add this
+        self.inventory_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.inventory_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
         
         self.inventory_table_stack.addWidget(self.inventory_table)
         self.inventory_table_stack.addWidget(self.inventory_empty_state)
@@ -348,16 +356,21 @@ class ReportsScreen(QWidget):
 
         self.customer_table = QTableWidget()
         self.customer_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.customer_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.customer_table.setShowGrid(False)
         self.customer_table.setMinimumHeight(700)
         self.customer_table.setColumnCount(6)
         self.customer_table.setHorizontalHeaderLabels(["Name", "Email", "Phone", "Amount Paid", "Balance", "Status"])
         self.customer_table.setAlternatingRowColors(True)
-        self.customer_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.customer_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
         self.customer_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.customer_table.setSortingEnabled(True)
+        self.customer_table.verticalHeader().setVisible(False) # Add this
+        self.customer_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.customer_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
         
         self.customer_table_stack.addWidget(self.customer_table)
         self.customer_table_stack.addWidget(self.customer_empty_state)
@@ -398,16 +411,21 @@ class ReportsScreen(QWidget):
 
         self.financial_table = QTableWidget()
         self.financial_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.financial_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.financial_table.setShowGrid(False)
         self.financial_table.setMinimumHeight(700)
         self.financial_table.setColumnCount(5)
         self.financial_table.setHorizontalHeaderLabels(["Date", "Revenue", "Costs", "Profit", "Profit Margin"])
         self.financial_table.setAlternatingRowColors(True)
-        self.financial_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.financial_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
         self.financial_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.financial_table.setSortingEnabled(True)
+        self.financial_table.verticalHeader().setVisible(False) # Add this
+        self.financial_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.financial_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
         
         self.financial_table_stack.addWidget(self.financial_table)
         self.financial_table_stack.addWidget(self.financial_empty_state)
@@ -448,16 +466,21 @@ class ReportsScreen(QWidget):
 
         self.daily_sales_table = QTableWidget()
         self.daily_sales_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.daily_sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.daily_sales_table.setShowGrid(False)
         self.daily_sales_table.setMinimumHeight(700)
         self.daily_sales_table.setColumnCount(6)
         self.daily_sales_table.setHorizontalHeaderLabels(["Product ID", "Product", "Customer", "Quantity", "Total", "Paid"])
         self.daily_sales_table.setAlternatingRowColors(True)
-        self.daily_sales_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.daily_sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
         self.daily_sales_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.daily_sales_table.setSortingEnabled(True)
+        self.daily_sales_table.verticalHeader().setVisible(False) # Add this
+        self.daily_sales_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.daily_sales_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
         
         self.daily_sales_table_stack.addWidget(self.daily_sales_table)
         self.daily_sales_table_stack.addWidget(self.daily_sales_empty_state)
@@ -494,16 +517,21 @@ class ReportsScreen(QWidget):
 
         self.stock_audit_table = QTableWidget()
         self.stock_audit_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.stock_audit_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.stock_audit_table.setShowGrid(False)
         self.stock_audit_table.setMinimumHeight(700)
         self.stock_audit_table.setColumnCount(7)
         self.stock_audit_table.setHorizontalHeaderLabels(["Product ID", "Product", "Qty Before", "Qty Added", "Qty After", "Date", "Type"])
         self.stock_audit_table.setAlternatingRowColors(True)
-        self.stock_audit_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # self.stock_audit_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
         self.stock_audit_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.stock_audit_table.setSortingEnabled(True)
+        self.stock_audit_table.verticalHeader().setVisible(False) # Add this
+        self.stock_audit_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.stock_audit_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
         
         self.stock_audit_table_stack.addWidget(self.stock_audit_table)
         self.stock_audit_table_stack.addWidget(self.stock_audit_empty_state)

@@ -147,22 +147,21 @@ class InventoryScreen(QWidget):
         
         self.product_table = QTableWidget()
         self.product_table.setAlternatingRowColors(True)
-        # ... (rest of the table setup is the same)
         self.product_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.product_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
         self.product_table.setShowGrid(False)
         self.product_table.setColumnCount(7)
         self.product_table.setHorizontalHeaderLabels([
             "Name", "SKU", "Category", "Quantity", "Cost Price", "Selling Price", "Actions"
         ])
         self.product_table.verticalHeader().setVisible(False)
+        self.product_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
         header = self.product_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
+        header.setSectionsMovable(False) # Add this
+        header.setSectionsClickable(False) # Add this
+        # Remove individual column resize mode settings as Stretch applies to all
+
 
         table_layout.addWidget(self.product_table)
         
