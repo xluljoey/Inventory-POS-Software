@@ -58,20 +58,37 @@ class ReportsScreen(QWidget):
         
         date_selection_style = """
             QComboBox, QDateEdit {
-                border: 1px solid #E0E0E0;
+                border: 1px solid #D1D5DB;
                 border-radius: 6px;
-                padding: 8px 12px;
+                padding: 5px 10px;
                 background-color: #FFFFFF;
-                min-height: 36px;
+                min-width: 120px;
+                min-height: 35px; /* Ensuring consistency with button height */
                 font-size: 13px;
             }
             QComboBox:hover, QDateEdit:hover {
                 border: 1px solid #1976D2;
             }
-            QComboBox::drop-down, QDateEdit::down-arrow { border: none; }
-            QComboBox::down-arrow, QDateEdit::down-arrow {
-                image: none; border-left: 5px solid transparent; border-right: 5px solid transparent;
-                border-top: 5px solid #757575; margin-right: 10px;
+            QComboBox::drop-down, QDateEdit::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 25px;
+                border-left: 1px solid #E5E7EB;
+            }
+            QDateEdit::down-arrow {
+                image: url(assets/icons/calendar.png); /* Use calendar icon if available */
+                width: 14px;
+                height: 14px;
+            }
+            QDateEdit::down-arrow:no-image {
+                border: 2px solid #6B7280;
+                width: 6px;
+                height: 6px;
+                background: #6B7280;
+            }
+            QCalendarWidget QAbstractItemView {
+                selection-background-color: #3B82F6;
+                selection-color: white;
             }
         """
         
@@ -114,7 +131,7 @@ class ReportsScreen(QWidget):
                 background-color: #1976D2;
                 color: white;
                 border-radius: 6px;
-                height: 36px;
+                height: 35px; /* Matches the new min-height of QDateEdit/QComboBox */
             }
             QPushButton:hover { background-color: #1565C0; }
         """)
