@@ -192,21 +192,22 @@ class ReportsScreen(QWidget):
         return export_group
 
     def create_summary_card(self, title, value, color):
-        """Original Summary Card Design restored"""
+        """Original Summary Card Design restored - Unified Standard"""
         card = QFrame()
         card.setObjectName("summaryCard")
         card.setStyleSheet(f"QFrame#summaryCard {{ background-color: {color}; border-radius: 10px; border: none; }}")
         
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(10, 5, 10, 5) # Tighten internal padding
+        layout.setContentsMargins(15, 10, 15, 10) # Unified internal padding
         layout.setSpacing(4)
+        card.setFixedHeight(110) # Unified fixed height
         
         title_label = QLabel(title)
-        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 9px; font-weight: 500;") # Reduced font size
+        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 11px; font-weight: 500;") # Reverted font size
         layout.addWidget(title_label)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet("color: white; font-size: 14px; font-weight: bold;") # Reduced font size
+        value_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;") # Reverted font size
         value_label.setObjectName("value_label")
         layout.addWidget(value_label)
         
@@ -214,333 +215,254 @@ class ReportsScreen(QWidget):
         card.value_label = value_label
         return card
 
+    def _setup_table_widget(self, table_widget, column_count, header_labels):
+        """Helper to set up common table widget properties"""
+        table_widget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table_widget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        table_widget.setShowGrid(False)
+        table_widget.setMinimumHeight(200) # Ensure table has some minimum size
+        table_widget.setColumnCount(column_count)
+        table_widget.setHorizontalHeaderLabels(header_labels)
+        table_widget.setAlternatingRowColors(True)
+        table_widget.setSelectionMode(QAbstractItemView.SingleSelection)
+        table_widget.setSortingEnabled(True)
+        table_widget.verticalHeader().setVisible(False) # Hide row numbers
+        table_widget.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Fixed vertical header size
+        header = table_widget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch) # Stretch to fill available width
+        header.setSectionsMovable(False) # Disable column reordering
+        header.setSectionsClickable(False) # Disable sorting by clicking headers (if not handled programmatically elsewhere)
+    
     def create_sales_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 10, 20, 10) # Updated margins
-        layout.setSpacing(15) # Updated spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
+        layout.setSpacing(10) # Unified spacing
         
-        top_row = QHBoxLayout()
-        top_row.setSpacing(5) # Reduced spacing
+        card_container = QFrame()
+        card_container_layout = QHBoxLayout(card_container)
+        card_container_layout.setContentsMargins(0,0,0,0)
+        card_container_layout.setSpacing(10) # Unified spacing between cards
         
         self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
-        self.total_sales_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
-        top_row.addWidget(self.total_sales_card)
+        card_container_layout.addWidget(self.total_sales_card)
         
         self.total_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
-        self.total_transactions_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
-        top_row.addWidget(self.total_transactions_card)
+        card_container_layout.addWidget(self.total_transactions_card)
         
         self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
-        self.avg_transaction_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
-        top_row.addWidget(self.avg_transaction_card)
+        card_container_layout.addWidget(self.avg_transaction_card)
         
         self.top_product_card = self.create_summary_card("Top Product", "N/A", "#9c27b0")
-        self.top_product_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
-        top_row.addWidget(self.top_product_card)
+        card_container_layout.addWidget(self.top_product_card)
         
-        top_row.addStretch()
-        top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
-        layout.addLayout(top_row)
-
+        card_container_layout.addStretch()
+        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        
+        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
+        
         self.sales_table_stack = QStackedWidget()
         self.sales_empty_state = EmptyStateWidget(icon="📊", message="No sales data found for the selected period.")
 
         self.sales_table = QTableWidget()
-        self.sales_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
-        self.sales_table.setShowGrid(False)
-        self.sales_table.setColumnCount(7)
-        self.sales_table.setHorizontalHeaderLabels(["Date", "Product", "Quantity", "Unit Price", "Total (Paid)", "Customer", "Cashier"])
-        self.sales_table.setAlternatingRowColors(True)
-        # self.sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
-        self.sales_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.sales_table.setSortingEnabled(True)
-        self.sales_table.verticalHeader().setVisible(False) # Add this
-        self.sales_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
-        header = self.sales_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
-        header.setSectionsMovable(False) # Add this
-        header.setSectionsClickable(False) # Add this
+        self._setup_table_widget(self.sales_table, 7, ["Date", "Product", "Quantity", "Unit Price", "Total (Paid)", "Customer", "Cashier"])
         
         self.sales_table_stack.addWidget(self.sales_table)
         self.sales_table_stack.addWidget(self.sales_empty_state)
-        layout.addWidget(self.sales_table_stack)
+        layout.addWidget(self.sales_table_stack, 1) # Table container gets 1 stretch
         
-        layout.addStretch(1) # Added stretch
-        
-        layout.setStretch(0, 0) # Cards container (top_row)
-        layout.setStretch(1, 1) # Table container (sales_table_stack)
         return tab
     
     def create_inventory_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
+        layout.setSpacing(10) # Unified spacing
         
-        top_row = QHBoxLayout()
-        top_row.setSpacing(10)
+        card_container = QFrame()
+        card_container_layout = QHBoxLayout(card_container)
+        card_container_layout.setContentsMargins(0,0,0,0)
+        card_container_layout.setSpacing(10) # Unified spacing between cards
         
         self.total_products_card = self.create_summary_card("Total", "0", "#1976d2")
-        self.total_products_card.setFixedSize(120, 70)
-        top_row.addWidget(self.total_products_card)
+        card_container_layout.addWidget(self.total_products_card)
         
         self.low_stock_card = self.create_summary_card("Low Stock", "0", "#ff9800")
-        self.low_stock_card.setFixedSize(120, 70)
-        top_row.addWidget(self.low_stock_card)
+        card_container_layout.addWidget(self.low_stock_card)
         
         self.out_of_stock_card = self.create_summary_card("Out of Stock", "0", "#f44336")
-        self.out_of_stock_card.setFixedSize(120, 70)
-        top_row.addWidget(self.out_of_stock_card)
+        card_container_layout.addWidget(self.out_of_stock_card)
         
         self.total_value_card = self.create_summary_card("Total Value", "GH₵0.00", "#4caf50")
-        self.total_value_card.setFixedSize(150, 70)
-        top_row.addWidget(self.total_value_card)
+        card_container_layout.addWidget(self.total_value_card)
         
-        top_row.addStretch()
-        top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
-        layout.addLayout(top_row)
+        card_container_layout.addStretch()
+        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        
+        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
         
         self.inventory_table_stack = QStackedWidget()
         self.inventory_empty_state = EmptyStateWidget(icon="📦", message="No inventory data found for the selected period.")
 
         self.inventory_table = QTableWidget()
-        self.inventory_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.inventory_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
-        self.inventory_table.setShowGrid(False)
-        self.inventory_table.setColumnCount(8)
-        self.inventory_table.setHorizontalHeaderLabels(["Product", "SKU", "Category", "Quantity", "Cost", "Price", "Value", "Status"])
-        self.inventory_table.setAlternatingRowColors(True)
-        # self.inventory_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
-        self.inventory_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.inventory_table.setSortingEnabled(True)
-        self.inventory_table.verticalHeader().setVisible(False) # Add this
-        self.inventory_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
-        header = self.inventory_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
-        header.setSectionsMovable(False) # Add this
-        header.setSectionsClickable(False) # Add this
+        self._setup_table_widget(self.inventory_table, 8, ["Product", "SKU", "Category", "Quantity", "Cost", "Price", "Value", "Status"])
         
         self.inventory_table_stack.addWidget(self.inventory_table)
         self.inventory_table_stack.addWidget(self.inventory_empty_state)
-        layout.addWidget(self.inventory_table_stack)
+        layout.addWidget(self.inventory_table_stack, 1) # Table container gets 1 stretch
         return tab
     
     def create_customer_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
+        layout.setSpacing(10) # Unified spacing
         
-        top_row = QHBoxLayout()
-        top_row.setSpacing(10)
+        card_container = QFrame()
+        card_container_layout = QHBoxLayout(card_container)
+        card_container_layout.setContentsMargins(0,0,0,0)
+        card_container_layout.setSpacing(10) # Unified spacing between cards
         
         self.total_customers_card = self.create_summary_card("Total Customers", "0", "#1976d2")
-        self.total_customers_card.setFixedWidth(160)
-        top_row.addWidget(self.total_customers_card)
+        card_container_layout.addWidget(self.total_customers_card)
         
         self.active_customers_card = self.create_summary_card("Active", "0", "#4caf50")
-        self.active_customers_card.setFixedWidth(140)
-        top_row.addWidget(self.active_customers_card)
+        card_container_layout.addWidget(self.active_customers_card)
         
         self.credit_customers_card = self.create_summary_card("Credit Customers", "0", "#ff9800")
-        self.credit_customers_card.setFixedWidth(160)
-        top_row.addWidget(self.credit_customers_card)
+        card_container_layout.addWidget(self.credit_customers_card)
         
         self.overdue_accounts_card = self.create_summary_card("Overdue Accounts", "0", "#f44336")
-        self.overdue_accounts_card.setFixedWidth(160)
-        top_row.addWidget(self.overdue_accounts_card)
+        card_container_layout.addWidget(self.overdue_accounts_card)
         
-        top_row.addStretch()
-        top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
-        layout.addLayout(top_row)
+        card_container_layout.addStretch()
+        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        
+        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
         
         self.customer_table_stack = QStackedWidget()
         self.customer_empty_state = EmptyStateWidget(icon="👥", message="No customer data found.")
 
         self.customer_table = QTableWidget()
-        self.customer_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.customer_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
-        self.customer_table.setShowGrid(False)
-        self.customer_table.setMinimumHeight(700)
-        self.customer_table.setColumnCount(6)
-        self.customer_table.setHorizontalHeaderLabels(["Name", "Email", "Phone", "Amount Paid", "Balance", "Status"])
-        self.customer_table.setAlternatingRowColors(True)
-        # self.customer_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
-        self.customer_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.customer_table.setSortingEnabled(True)
-        self.customer_table.verticalHeader().setVisible(False) # Add this
-        self.customer_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
-        header = self.customer_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
-        header.setSectionsMovable(False) # Add this
-        header.setSectionsClickable(False) # Add this
+        self._setup_table_widget(self.customer_table, 6, ["Name", "Email", "Phone", "Amount Paid", "Balance", "Status"])
         
         self.customer_table_stack.addWidget(self.customer_table)
         self.customer_table_stack.addWidget(self.customer_empty_state)
-        layout.addWidget(self.customer_table_stack)
+        layout.addWidget(self.customer_table_stack, 1) # Table container gets 1 stretch
         return tab
     
     def create_financial_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
+        layout.setSpacing(10) # Unified spacing
         
-        top_row = QHBoxLayout()
-        top_row.setSpacing(10)
+        card_container = QFrame()
+        card_container_layout = QHBoxLayout(card_container)
+        card_container_layout.setContentsMargins(0,0,0,0)
+        card_container_layout.setSpacing(10) # Unified spacing between cards
         
         self.total_revenue_card = self.create_summary_card("Total Revenue", "GH₵0.00", "#4caf50")
-        self.total_revenue_card.setFixedWidth(160)
-        top_row.addWidget(self.total_revenue_card)
+        card_container_layout.addWidget(self.total_revenue_card)
         
         self.total_costs_card = self.create_summary_card("Total Costs", "GH₵0.00", "#f44336")
-        self.total_costs_card.setFixedWidth(160)
-        top_row.addWidget(self.total_costs_card)
+        card_container_layout.addWidget(self.total_costs_card)
         
         self.total_profit_card = self.create_summary_card("Total Profit", "GH₵0.00", "#9c27b0")
-        self.total_profit_card.setFixedWidth(160)
-        top_row.addWidget(self.total_profit_card)
+        card_container_layout.addWidget(self.total_profit_card)
         
         self.profit_margin_card = self.create_summary_card("Profit Margin", "0%", "#ff9800")
-        self.profit_margin_card.setFixedWidth(140)
-        top_row.addWidget(self.profit_margin_card)
+        card_container_layout.addWidget(self.profit_margin_card)
         
-        top_row.addStretch()
-        top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
-        layout.addLayout(top_row)
+        card_container_layout.addStretch()
+        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        
+        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
         
         self.financial_table_stack = QStackedWidget()
         self.financial_empty_state = EmptyStateWidget(icon="💸", message="No financial data found for the selected period.")
 
         self.financial_table = QTableWidget()
-        self.financial_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.financial_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
-        self.financial_table.setShowGrid(False)
-        self.financial_table.setMinimumHeight(700)
-        self.financial_table.setColumnCount(5)
-        self.financial_table.setHorizontalHeaderLabels(["Date", "Revenue", "Costs", "Profit", "Profit Margin"])
-        self.financial_table.setAlternatingRowColors(True)
-        # self.financial_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
-        self.financial_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.financial_table.setSortingEnabled(True)
-        self.financial_table.verticalHeader().setVisible(False) # Add this
-        self.financial_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
-        header = self.financial_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
-        header.setSectionsMovable(False) # Add this
-        header.setSectionsClickable(False) # Add this
+        self._setup_table_widget(self.financial_table, 5, ["Date", "Revenue", "Costs", "Profit", "Profit Margin"])
         
         self.financial_table_stack.addWidget(self.financial_table)
         self.financial_table_stack.addWidget(self.financial_empty_state)
-        layout.addWidget(self.financial_table_stack)
+        layout.addWidget(self.financial_table_stack, 1) # Table container gets 1 stretch
         return tab
 
     def create_daily_sales_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
+        layout.setSpacing(10) # Unified spacing
         
-        top_row = QHBoxLayout()
-        top_row.setSpacing(10)
+        card_container = QFrame()
+        card_container_layout = QHBoxLayout(card_container)
+        card_container_layout.setContentsMargins(0,0,0,0)
+        card_container_layout.setSpacing(10) # Unified spacing between cards
         
         self.daily_total_sales_card = self.create_summary_card("Today's Revenue", "GH₵0.00", "#4caf50")
-        self.daily_total_sales_card.setFixedWidth(180)
-        top_row.addWidget(self.daily_total_sales_card)
+        card_container_layout.addWidget(self.daily_total_sales_card)
         
         self.daily_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
-        self.daily_transactions_card.setFixedWidth(120)
-        top_row.addWidget(self.daily_transactions_card)
+        card_container_layout.addWidget(self.daily_transactions_card)
         
         self.daily_avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
-        self.daily_avg_transaction_card.setFixedWidth(180)
-        top_row.addWidget(self.daily_avg_transaction_card)
+        card_container_layout.addWidget(self.daily_avg_transaction_card)
         
         self.daily_customers_card = self.create_summary_card("Customers", "0", "#9c27b0")
-        self.daily_customers_card.setFixedWidth(120)
-        top_row.addWidget(self.daily_customers_card)
+        card_container_layout.addWidget(self.daily_customers_card)
         
-        top_row.addStretch()
-        top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
-        layout.addLayout(top_row)
+        card_container_layout.addStretch()
+        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        
+        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
         
         self.daily_sales_table_stack = QStackedWidget()
         self.daily_sales_empty_state = EmptyStateWidget(icon="📅", message="No daily sales data found for today.")
 
         self.daily_sales_table = QTableWidget()
-        self.daily_sales_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.daily_sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
-        self.daily_sales_table.setShowGrid(False)
-        self.daily_sales_table.setMinimumHeight(700)
-        self.daily_sales_table.setColumnCount(6)
-        self.daily_sales_table.setHorizontalHeaderLabels(["Product ID", "Product", "Customer", "Quantity", "Total", "Paid"])
-        self.daily_sales_table.setAlternatingRowColors(True)
-        # self.daily_sales_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
-        self.daily_sales_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.daily_sales_table.setSortingEnabled(True)
-        self.daily_sales_table.verticalHeader().setVisible(False) # Add this
-        self.daily_sales_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
-        header = self.daily_sales_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
-        header.setSectionsMovable(False) # Add this
-        header.setSectionsClickable(False) # Add this
+        self._setup_table_widget(self.daily_sales_table, 6, ["Product ID", "Product", "Customer", "Quantity", "Total", "Paid"])
         
         self.daily_sales_table_stack.addWidget(self.daily_sales_table)
         self.daily_sales_table_stack.addWidget(self.daily_sales_empty_state)
-        layout.addWidget(self.daily_sales_table_stack)
+        layout.addWidget(self.daily_sales_table_stack, 1) # Table container gets 1 stretch
         return tab
 
     def create_stock_audit_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
+        layout.setSpacing(10) # Unified spacing
         
-        top_row = QHBoxLayout()
-        top_row.setSpacing(10)
+        card_container = QFrame()
+        card_container_layout = QHBoxLayout(card_container)
+        card_container_layout.setContentsMargins(0,0,0,0)
+        card_container_layout.setSpacing(10) # Unified spacing between cards
         
         self.total_arrivals_card = self.create_summary_card("Total Arrivals", "0", "#4caf50")
-        self.total_arrivals_card.setFixedWidth(160)
-        top_row.addWidget(self.total_arrivals_card)
+        card_container_layout.addWidget(self.total_arrivals_card)
         
         self.total_restocked_qty_card = self.create_summary_card("Total Qty Added", "0", "#1976d2")
-        self.total_restocked_qty_card.setFixedWidth(160)
-        top_row.addWidget(self.total_restocked_qty_card)
+        card_container_layout.addWidget(self.total_restocked_qty_card)
         
         self.unique_products_restocked_card = self.create_summary_card("Products Restocked", "0", "#ff9800")
-        self.unique_products_restocked_card.setFixedWidth(180)
-        top_row.addWidget(self.unique_products_restocked_card)
+        card_container_layout.addWidget(self.unique_products_restocked_card)
         
-        top_row.addStretch()
-        top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
-        layout.addLayout(top_row)
+        card_container_layout.addStretch()
+        card_container_layout.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
+        
+        layout.addWidget(card_container, 0) # Cards container gets 0 stretch
         
         self.stock_audit_table_stack = QStackedWidget()
         self.stock_audit_empty_state = EmptyStateWidget(icon="📋", message="No stock audit entries found for the selected period.")
 
         self.stock_audit_table = QTableWidget()
-        self.stock_audit_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.stock_audit_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Add this
-        self.stock_audit_table.setShowGrid(False)
-        self.stock_audit_table.setMinimumHeight(700)
-        self.stock_audit_table.setColumnCount(7)
-        self.stock_audit_table.setHorizontalHeaderLabels(["Product ID", "Product", "Qty Before", "Qty Added", "Qty After", "Date", "Type"])
-        self.stock_audit_table.setAlternatingRowColors(True)
-        # self.stock_audit_table.setSelectionBehavior(QAbstractItemView.SelectRows) # Already set above
-        self.stock_audit_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.stock_audit_table.setSortingEnabled(True)
-        self.stock_audit_table.verticalHeader().setVisible(False) # Add this
-        self.stock_audit_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed) # Add this
-        header = self.stock_audit_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch) # Apply stretch to all
-        header.setSectionsMovable(False) # Add this
-        header.setSectionsClickable(False) # Add this
+        self._setup_table_widget(self.stock_audit_table, 7, ["Product ID", "Product", "Qty Before", "Qty Added", "Qty After", "Date", "Type"])
         
         self.stock_audit_table_stack.addWidget(self.stock_audit_table)
         self.stock_audit_table_stack.addWidget(self.stock_audit_empty_state)
-        layout.addWidget(self.stock_audit_table_stack)
+        layout.addWidget(self.stock_audit_table_stack, 1) # Table container gets 1 stretch
         return tab
     
     def get_date_range(self):
