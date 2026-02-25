@@ -64,7 +64,7 @@ class LoginScreen(QWidget):
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
             QLabel#loginTitle {
-                font-size: 24px;
+                font-size: 24pt;
                 font-weight: bold;
                 color: #111827; /* Updated color */
                 margin-bottom: 10px;
