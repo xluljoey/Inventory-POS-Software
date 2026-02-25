@@ -242,7 +242,10 @@ class ReportsScreen(QWidget):
         top_row.addStretch()
         top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
         layout.addLayout(top_row)
-        
+
+        self.sales_table_stack = QStackedWidget()
+        self.sales_empty_state = EmptyStateWidget(icon="📊", message="No sales data found for the selected period.")
+
         self.sales_table = QTableWidget()
         self.sales_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.sales_table.setShowGrid(False)
@@ -255,7 +258,10 @@ class ReportsScreen(QWidget):
         self.sales_table.setSortingEnabled(True)
         header = self.sales_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.sales_table)
+        
+        self.sales_table_stack.addWidget(self.sales_table)
+        self.sales_table_stack.addWidget(self.sales_empty_state)
+        layout.addWidget(self.sales_table_stack)
         return tab
     
     def create_inventory_report_tab(self):
@@ -287,6 +293,9 @@ class ReportsScreen(QWidget):
         top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
         layout.addLayout(top_row)
         
+        self.inventory_table_stack = QStackedWidget()
+        self.inventory_empty_state = EmptyStateWidget(icon="📦", message="No inventory data found for the selected period.")
+
         self.inventory_table = QTableWidget()
         self.inventory_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.inventory_table.setShowGrid(False)
@@ -299,7 +308,10 @@ class ReportsScreen(QWidget):
         self.inventory_table.setSortingEnabled(True)
         header = self.inventory_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.inventory_table)
+        
+        self.inventory_table_stack.addWidget(self.inventory_table)
+        self.inventory_table_stack.addWidget(self.inventory_empty_state)
+        layout.addWidget(self.inventory_table_stack)
         return tab
     
     def create_customer_report_tab(self):
@@ -331,6 +343,9 @@ class ReportsScreen(QWidget):
         top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
         layout.addLayout(top_row)
         
+        self.customer_table_stack = QStackedWidget()
+        self.customer_empty_state = EmptyStateWidget(icon="👥", message="No customer data found.")
+
         self.customer_table = QTableWidget()
         self.customer_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.customer_table.setShowGrid(False)
@@ -343,7 +358,10 @@ class ReportsScreen(QWidget):
         self.customer_table.setSortingEnabled(True)
         header = self.customer_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.customer_table)
+        
+        self.customer_table_stack.addWidget(self.customer_table)
+        self.customer_table_stack.addWidget(self.customer_empty_state)
+        layout.addWidget(self.customer_table_stack)
         return tab
     
     def create_financial_report_tab(self):
@@ -375,6 +393,9 @@ class ReportsScreen(QWidget):
         top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
         layout.addLayout(top_row)
         
+        self.financial_table_stack = QStackedWidget()
+        self.financial_empty_state = EmptyStateWidget(icon="💸", message="No financial data found for the selected period.")
+
         self.financial_table = QTableWidget()
         self.financial_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.financial_table.setShowGrid(False)
@@ -387,7 +408,10 @@ class ReportsScreen(QWidget):
         self.financial_table.setSortingEnabled(True)
         header = self.financial_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.financial_table)
+        
+        self.financial_table_stack.addWidget(self.financial_table)
+        self.financial_table_stack.addWidget(self.financial_empty_state)
+        layout.addWidget(self.financial_table_stack)
         return tab
 
     def create_daily_sales_report_tab(self):
@@ -419,6 +443,9 @@ class ReportsScreen(QWidget):
         top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
         layout.addLayout(top_row)
         
+        self.daily_sales_table_stack = QStackedWidget()
+        self.daily_sales_empty_state = EmptyStateWidget(icon="📅", message="No daily sales data found for today.")
+
         self.daily_sales_table = QTableWidget()
         self.daily_sales_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.daily_sales_table.setShowGrid(False)
@@ -431,7 +458,10 @@ class ReportsScreen(QWidget):
         self.daily_sales_table.setSortingEnabled(True)
         header = self.daily_sales_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.daily_sales_table)
+        
+        self.daily_sales_table_stack.addWidget(self.daily_sales_table)
+        self.daily_sales_table_stack.addWidget(self.daily_sales_empty_state)
+        layout.addWidget(self.daily_sales_table_stack)
         return tab
 
     def create_stock_audit_tab(self):
@@ -459,6 +489,9 @@ class ReportsScreen(QWidget):
         top_row.addWidget(self.create_export_row(), 0, Qt.AlignTop | Qt.AlignRight)
         layout.addLayout(top_row)
         
+        self.stock_audit_table_stack = QStackedWidget()
+        self.stock_audit_empty_state = EmptyStateWidget(icon="📋", message="No stock audit entries found for the selected period.")
+
         self.stock_audit_table = QTableWidget()
         self.stock_audit_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.stock_audit_table.setShowGrid(False)
@@ -471,7 +504,10 @@ class ReportsScreen(QWidget):
         self.stock_audit_table.setSortingEnabled(True)
         header = self.stock_audit_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.stock_audit_table)
+        
+        self.stock_audit_table_stack.addWidget(self.stock_audit_table)
+        self.stock_audit_table_stack.addWidget(self.stock_audit_empty_state)
+        layout.addWidget(self.stock_audit_table_stack)
         return tab
     
     def get_date_range(self):
@@ -509,6 +545,18 @@ class ReportsScreen(QWidget):
     def load_sales_data(self, start_date, end_date):
         try:
             sales_data = DatabaseService.get_sales_by_date_range(start_date, end_date)
+            
+            if not sales_data:
+                self.sales_table_stack.setCurrentWidget(self.sales_empty_state)
+                self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.total_transactions_card.value_label.setText("0")
+                self.avg_transaction_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.top_product_card.value_label.setText("N/A")
+                self.sales_table.setRowCount(0) # Clear table
+                return
+
+            self.sales_table_stack.setCurrentWidget(self.sales_table)
+            
             total_sales = sum(sale['total_amount'] for sale in sales_data)
             total_transactions = len(sales_data)
             avg_transaction = total_sales / total_transactions if total_transactions > 0 else 0
@@ -567,6 +615,18 @@ class ReportsScreen(QWidget):
     def load_inventory_data(self):
         try:
             products = InventoryService.get_all_products()
+            
+            if not products:
+                self.inventory_table_stack.setCurrentWidget(self.inventory_empty_state)
+                self.total_products_card.value_label.setText("0")
+                self.low_stock_card.value_label.setText("0")
+                self.out_of_stock_card.value_label.setText("0")
+                self.total_value_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.inventory_table.setRowCount(0) # Clear table
+                return
+                
+            self.inventory_table_stack.setCurrentWidget(self.inventory_table)
+            
             total_products = len(products)
             low_stock_products = [p for p in products if p['is_low_stock']]
             out_of_stock_products = [p for p in products if p['quantity'] <= 0]
@@ -604,6 +664,18 @@ class ReportsScreen(QWidget):
     def load_customer_data(self):
         try:
             customers = CustomerService.get_all_customers()
+            
+            if not customers:
+                self.customer_table_stack.setCurrentWidget(self.customer_empty_state)
+                self.total_customers_card.value_label.setText("0")
+                self.active_customers_card.value_label.setText("0")
+                self.credit_customers_card.value_label.setText("0")
+                self.overdue_accounts_card.value_label.setText("0")
+                self.customer_table.setRowCount(0) # Clear table
+                return
+
+            self.customer_table_stack.setCurrentWidget(self.customer_table)
+            
             total_customers = len(customers)
             active_customers = [c for c in customers if c['outstanding_balance'] == 0]
             credit_customers = [c for c in customers if c['credit_limit'] > 0]
@@ -650,6 +722,18 @@ class ReportsScreen(QWidget):
     def load_financial_data(self, start, end):
         try:
             sales = DatabaseService.get_sales_by_date_range(start, end)
+            
+            if not sales:
+                self.financial_table_stack.setCurrentWidget(self.financial_empty_state)
+                self.total_revenue_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.total_costs_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.total_profit_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.profit_margin_card.value_label.setText("0%")
+                self.financial_table.setRowCount(0) # Clear table
+                return
+            
+            self.financial_table_stack.setCurrentWidget(self.financial_table)
+            
             rev = sum(s['total_amount'] for s in sales)
             cost = 0
             for s in sales:
@@ -681,6 +765,17 @@ class ReportsScreen(QWidget):
             end = datetime.combine(today, datetime.max.time())
             sales = DatabaseService.get_sales_by_date_range(start, end)
             
+            if not sales:
+                self.daily_sales_table_stack.setCurrentWidget(self.daily_sales_empty_state)
+                self.daily_total_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.daily_transactions_card.value_label.setText("0")
+                self.daily_avg_transaction_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
+                self.daily_customers_card.value_label.setText("0")
+                self.daily_sales_table.setRowCount(0) # Clear table
+                return
+
+            self.daily_sales_table_stack.setCurrentWidget(self.daily_sales_table)
+
             total_sales = sum(sale['total_amount'] for sale in sales)
             total_transactions = len(sales)
             avg_transaction = total_sales / total_transactions if total_transactions > 0 else 0
@@ -711,6 +806,16 @@ class ReportsScreen(QWidget):
         try:
             history = InventoryService.get_restock_history(100)
             
+            if not history:
+                self.stock_audit_table_stack.setCurrentWidget(self.stock_audit_empty_state)
+                self.total_arrivals_card.value_label.setText("0")
+                self.total_restocked_qty_card.value_label.setText("0.00")
+                self.unique_products_restocked_card.value_label.setText("0")
+                self.stock_audit_table.setRowCount(0) # Clear table
+                return
+
+            self.stock_audit_table_stack.setCurrentWidget(self.stock_audit_table)
+
             self.total_arrivals_card.value_label.setText(str(len(history)))
             self.total_restocked_qty_card.value_label.setText(f"{sum(item['added_qty'] for item in history):.2f}")
             self.unique_products_restocked_card.value_label.setText(str(len(set(item['product_id'] for item in history))))

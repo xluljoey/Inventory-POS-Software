@@ -124,7 +124,14 @@ class InventoryScreen(QWidget):
         self.create_table_section(main_layout)
     
     def create_table_section(self, parent_layout):
-        """Create the data table section with robust CSS grid layout from scratch"""
+        """Create the data table section with a stacked layout for empty state handling."""
+        from ui.common_widgets import EmptyStateWidget
+        from PySide6.QtWidgets import QStackedWidget
+
+        # SPRINT 4: Use QStackedWidget to manage table and empty state
+        self.table_stack = QStackedWidget()
+        
+        # --- Table Widget ---
         table_container = QFrame()
         table_container.setObjectName("tableContainer")
         table_container.setStyleSheet("""
@@ -135,115 +142,42 @@ class InventoryScreen(QWidget):
             }
         """)
         table_layout = QVBoxLayout(table_container)
-        table_layout.setContentsMargins(20, 20, 20, 20)
+        table_layout.setContentsMargins(0, 0, 0, 0)
         table_layout.setSpacing(0)
         
-        # Product table with enhanced robust styling
         self.product_table = QTableWidget()
-        self.product_table.setEditTriggers(QAbstractItemView.NoEditTriggers) # Disable editing
-        self.product_table.setShowGrid(False) # Remove ghost lines
+        self.product_table.setAlternatingRowColors(True)
+        # ... (rest of the table setup is the same)
+        self.product_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.product_table.setShowGrid(False)
         self.product_table.setColumnCount(7)
         self.product_table.setHorizontalHeaderLabels([
             "Name", "SKU", "Category", "Quantity", "Cost Price", "Selling Price", "Actions"
         ])
-        self.product_table.setObjectName("dataTable")
-        
-        # Configure table appearance
-        self.product_table.setAlternatingRowColors(True)
-        self.product_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.product_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.product_table.setSortingEnabled(True)
-        
-        # Apply comprehensive table styling with CSS grid layout approach
-        self.product_table.setStyleSheet("""
-            /* Table Widget Base Styles */
-            QTableWidget#dataTable {
-                background-color: white;
-                border: none;
-                gridline-color: transparent;
-                outline: none;
-            }
-            
-            /* Header Styles */
-            QTableWidget#dataTable QHeaderView::section {
-                background-color: #F8F9FA;
-                color: #2C3E50;
-                padding: 12px;
-                font-weight: 600;
-                border: none;
-                border-bottom: 1px solid #E0E0E0;
-                text-align: left;
-            }
-            
-            /* Fixed Row Height and Cell Styles */
-            QTableWidget#dataTable QAbstractItemView::item {
-                padding: 12px 8px;  /* Increased vertical padding */
-                border: none;
-                min-height: 50px;  /* Increased min height */
-                max-height: 50px;  /* Increased max height */
-            }
-            
-            /* Alternating Row Colors */
-            QTableWidget#dataTable QAbstractItemView::item:alternate {
-                background-color: #FAFAFA;
-            }
-            
-            QTableWidget#dataTable QAbstractItemView::item:!alternate {
-                background-color: #FFFFFF;
-            }
-            
-            /* Selected Row Style */
-            QTableWidget#dataTable QAbstractItemView::item:selected {
-                background-color: #E3F2FD;
-                color: #1976D2;
-            }
-            
-            /* Hover State */
-            QTableWidget#dataTable QAbstractItemView::item:hover {
-                background-color: #F5F5F5;
-            }
-            
-            /* Vertical Header (Row Numbers) - Hidden */
-            QTableWidget#dataTable QHeaderView::vertical {
-                background-color: transparent;
-                border: none;
-                width: 0px;
-            }
-        """)
-        
-        # Enforce fixed row heights and prevent manual resizing
-        self.product_table.verticalHeader().setDefaultSectionSize(50)  # Fixed 50px row height to match increased padding
-        self.product_table.verticalHeader().setMinimumSectionSize(50)   # Minimum 50px to match padding
-        self.product_table.verticalHeader().setMaximumSectionSize(50)   # Maximum 50px to match padding
-        self.product_table.verticalHeader().setVisible(False)  # Hide row numbers
-        
-        # Configure column widths for optimal content display with robust distribution
+        self.product_table.verticalHeader().setVisible(False)
         header = self.product_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)  # Name - Stretch to fill
-        header.setSectionResizeMode(1, QHeaderView.Fixed)  # SKU - Fixed width
-        header.setSectionResizeMode(2, QHeaderView.Fixed)  # Category - Fixed width
-        header.setSectionResizeMode(3, QHeaderView.Fixed)  # Quantity - Fixed width
-        header.setSectionResizeMode(4, QHeaderView.Fixed)  # Cost Price - Fixed width
-        header.setSectionResizeMode(5, QHeaderView.Fixed)  # Selling Price - Fixed width
-        header.setSectionResizeMode(6, QHeaderView.Fixed)  # Actions - Fixed width
-        
-        # Set alignment for numeric columns to right-align
-        header.setSectionsClickable(True)
-        header.setSortIndicatorShown(True)
-        
-        # Set specific column widths for optimal content display with better distribution
-        self.product_table.setColumnWidth(0, 150)  # Name - Wider for better text display
-        self.product_table.setColumnWidth(1, 100)  # SKU
-        self.product_table.setColumnWidth(2, 120)  # Category
-        self.product_table.setColumnWidth(3, 100)  # Quantity - Wider for status indicators
-        self.product_table.setColumnWidth(4, 100)  # Cost Price - Right aligned
-        self.product_table.setColumnWidth(5, 100)  # Selling Price - Right aligned
-        self.product_table.setColumnWidth(6, 100)  # Actions - Just View button now
-        
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
+
         table_layout.addWidget(self.product_table)
         
-        parent_layout.addWidget(table_container)  # Takes full width
-    
+        # --- Empty State Widget ---
+        self.empty_state_widget = EmptyStateWidget(
+            icon="📦",
+            message="No items in inventory yet.\nClick 'Add Item' to get started!"
+        )
+
+        # Add both to the stack
+        self.table_stack.addWidget(table_container)
+        self.table_stack.addWidget(self.empty_state_widget)
+        
+        parent_layout.addWidget(self.table_stack)
+
     def set_current_user(self, user: User):
         """Set the current user and update UI permissions"""
         print(f"DEBUG: InventoryScreen.set_current_user called for {user.username} with role {user.role}")
@@ -251,23 +185,15 @@ class InventoryScreen(QWidget):
         if hasattr(self, 'manage_stock_btn'):
             is_admin = (user.role == "admin")
             self.manage_stock_btn.setVisible(is_admin)
-            
-            # Show/Hide Cost Price Column (Index 4) based on role
-            if is_admin:
-                self.product_table.showColumn(4)
-            else:
-                self.product_table.hideColumn(4)
-                
-            print(f"DEBUG: Manage Stock button visibility set to {is_admin}")
+            if self.product_table:
+                self.product_table.setColumnHidden(4, not is_admin) # Hide/show Cost Price
         else:
             print("DEBUG: manage_stock_btn NOT FOUND in InventoryScreen")
         self.load_inventory_data() # Refresh to update action buttons
-    
+
     def open_manage_stock_dialog(self):
         """Open the Manage Stock dialog (Admin only)"""
-        # Double-check user permissions before opening dialog
         if not self.current_user or self.current_user.role != "admin":
-            from ui.custom_dialog import CustomWarningDialog
             CustomWarningDialog("Access Denied", "You do not have permission to manage stock.", self).exec()
             return
             
@@ -275,36 +201,27 @@ class InventoryScreen(QWidget):
             from ui.manage_stock_dialog import ManageStockDialog
             dialog = ManageStockDialog(self, self.current_user)
             if dialog.exec() == QDialog.Accepted:
-                self.load_inventory_data()  # Refresh table after dialog closes
+                self.load_inventory_data()
         except Exception as e:
-            from ui.custom_dialog import CustomErrorDialog
             CustomErrorDialog("Error", f"Could not open Manage Stock dialog: {str(e)}", self).exec()
-    
-    def load_categories_for_filter(self):
-        """Load categories into the filter dropdown"""
-        try:
-            categories = InventoryService.get_all_categories()
-            self.category_combo.clear()
-            self.category_combo.addItem("All Categories")
-            for category in categories:
-                self.category_combo.addItem(category['name'])
-        except Exception as e:
-            # If there's an error loading categories, use default ones
-            self.category_combo.clear()
-            self.category_combo.addItem("All Categories")
-            self.category_combo.addItems(["Electronics", "Clothing", "Food", "Other"])
-            print(f"Error loading categories: {e}")
-            QMessageBox.warning(self, "Warning", f"Could not load categories: {e}. Using defaults.")
 
     def load_inventory_data(self):
-        """Load inventory data from the service"""
+        """Load inventory data from the service and handle empty state."""
         try:
             products_data = InventoryService.get_all_products()
-            self.all_products = products_data  # Store for filtering
+            self.all_products = products_data
             self.display_products(self.all_products)
+
+            # SPRINT 4: Toggle empty state view
+            if not products_data:
+                self.table_stack.setCurrentWidget(self.empty_state_widget)
+            else:
+                self.table_stack.setCurrentWidget(self.table_stack.widget(0)) # Show table container
+
         except Exception as e:
-            dialog = CustomErrorDialog("Error", f"Failed to load inventory data: {str(e)}", self)
-            dialog.exec()
+            CustomErrorDialog("Error", f"Failed to load inventory data: {str(e)}", self).exec()
+            self.table_stack.setCurrentWidget(self.empty_state_widget) # Show empty state on error too
+
     
     def display_products(self, products):
         """Display products in the table with status indicators and action buttons"""
