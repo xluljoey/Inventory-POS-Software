@@ -68,7 +68,7 @@ class ReportsScreen(QWidget):
             QComboBox:hover, QDateEdit:hover {
                 border: 1px solid #1976D2;
             }
-            QComboBox::drop-down, QDateEdit::drop-down { border: none; }
+            QComboBox::drop-down, QDateEdit::down-arrow { border: none; }
             QComboBox::down-arrow, QDateEdit::down-arrow {
                 image: none; border-left: 5px solid transparent; border-right: 5px solid transparent;
                 border-top: 5px solid #757575; margin-right: 10px;
@@ -198,16 +198,16 @@ class ReportsScreen(QWidget):
         card.setStyleSheet(f"QFrame#summaryCard {{ background-color: {color}; border-radius: 10px; border: none; }}")
         
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(15, 10, 15, 10) # Unified internal padding
-        layout.setSpacing(4)
-        card.setFixedHeight(110) # Unified fixed height
+        layout.setContentsMargins(10, 2, 10, 2) # Minimal top/bottom padding
+        layout.setSpacing(0) # No spacing between title and value
+        card.setFixedHeight(75) # Half-Height target
         
         title_label = QLabel(title)
-        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 11px; font-weight: 500;") # Reverted font size
+        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 9px; font-weight: bold;") # Set font size to 9pt, bold
         layout.addWidget(title_label)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;") # Reverted font size
+        value_label.setStyleSheet("color: white; font-size: 12px; font-weight: bold;") # Set font size to 12pt, bold
         value_label.setObjectName("value_label")
         layout.addWidget(value_label)
         
@@ -236,13 +236,14 @@ class ReportsScreen(QWidget):
     def create_sales_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
-        layout.setSpacing(10) # Unified spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
+        layout.setSpacing(5) # Global layout priority spacing
         
         card_container = QFrame()
         card_container_layout = QHBoxLayout(card_container)
         card_container_layout.setContentsMargins(0,0,0,0)
         card_container_layout.setSpacing(10) # Unified spacing between cards
+        card_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
         card_container_layout.addWidget(self.total_sales_card)
@@ -276,13 +277,14 @@ class ReportsScreen(QWidget):
     def create_inventory_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
-        layout.setSpacing(10) # Unified spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
+        layout.setSpacing(5) # Global layout priority spacing
         
         card_container = QFrame()
         card_container_layout = QHBoxLayout(card_container)
         card_container_layout.setContentsMargins(0,0,0,0)
         card_container_layout.setSpacing(10) # Unified spacing between cards
+        card_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_products_card = self.create_summary_card("Total", "0", "#1976d2")
         card_container_layout.addWidget(self.total_products_card)
@@ -315,13 +317,14 @@ class ReportsScreen(QWidget):
     def create_customer_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
-        layout.setSpacing(10) # Unified spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
+        layout.setSpacing(5) # Global layout priority spacing
         
         card_container = QFrame()
         card_container_layout = QHBoxLayout(card_container)
         card_container_layout.setContentsMargins(0,0,0,0)
         card_container_layout.setSpacing(10) # Unified spacing between cards
+        card_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_customers_card = self.create_summary_card("Total Customers", "0", "#1976d2")
         card_container_layout.addWidget(self.total_customers_card)
@@ -354,13 +357,14 @@ class ReportsScreen(QWidget):
     def create_financial_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
-        layout.setSpacing(10) # Unified spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
+        layout.setSpacing(5) # Global layout priority spacing
         
         card_container = QFrame()
         card_container_layout = QHBoxLayout(card_container)
         card_container_layout.setContentsMargins(0,0,0,0)
         card_container_layout.setSpacing(10) # Unified spacing between cards
+        card_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_revenue_card = self.create_summary_card("Total Revenue", "GH₵0.00", "#4caf50")
         card_container_layout.addWidget(self.total_revenue_card)
@@ -393,13 +397,14 @@ class ReportsScreen(QWidget):
     def create_daily_sales_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
-        layout.setSpacing(10) # Unified spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
+        layout.setSpacing(5) # Global layout priority spacing
         
         card_container = QFrame()
         card_container_layout = QHBoxLayout(card_container)
         card_container_layout.setContentsMargins(0,0,0,0)
         card_container_layout.setSpacing(10) # Unified spacing between cards
+        card_container.setFixedHeight(90) # Fixed height for card container
         
         self.daily_total_sales_card = self.create_summary_card("Today's Revenue", "GH₵0.00", "#4caf50")
         card_container_layout.addWidget(self.daily_total_sales_card)
@@ -432,13 +437,14 @@ class ReportsScreen(QWidget):
     def create_stock_audit_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20) # Unified margins
-        layout.setSpacing(10) # Unified spacing
+        layout.setContentsMargins(20, 20, 20, 20) # Global layout priority margins
+        layout.setSpacing(5) # Global layout priority spacing
         
         card_container = QFrame()
         card_container_layout = QHBoxLayout(card_container)
         card_container_layout.setContentsMargins(0,0,0,0)
         card_container_layout.setSpacing(10) # Unified spacing between cards
+        card_container.setFixedHeight(90) # Fixed height for card container
         
         self.total_arrivals_card = self.create_summary_card("Total Arrivals", "0", "#4caf50")
         card_container_layout.addWidget(self.total_arrivals_card)
