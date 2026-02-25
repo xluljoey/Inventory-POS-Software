@@ -75,11 +75,7 @@ class ReportsScreen(QWidget):
                 width: 25px;
                 border-left: 1px solid #E5E7EB;
             }
-            QDateEdit::down-arrow {
-                image: url(assets/icons/calendar.png); /* Use calendar icon if available */
-                width: 14px;
-                height: 14px;
-            }
+            /* The image for QDateEdit down-arrow was removed as the asset is not available. */
             QDateEdit::down-arrow:no-image {
                 border: 2px solid #6B7280;
                 width: 6px;
@@ -600,7 +596,7 @@ class ReportsScreen(QWidget):
             
             if not products:
                 self.inventory_table_stack.setCurrentWidget(self.inventory_empty_state)
-                self.total_products_card.value_label.setText("0")
+                self.total_products_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
                 self.low_stock_card.value_label.setText("0")
                 self.out_of_stock_card.value_label.setText("0")
                 self.total_value_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
