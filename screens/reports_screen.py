@@ -134,7 +134,62 @@ class ReportsScreen(QWidget):
         self.update_report_btn.clicked.connect(self.on_update_report_clicked)
         date_layout.addWidget(self.update_report_btn)
         
-        date_layout.addStretch()
+        date_layout.addStretch() # This stretch now sits before the export actions.
+        
+        # --- Export Actions Bar ---
+        export_label = QLabel("Export As:")
+        export_label.setStyleSheet("color: #757575; font-size: 13px;")
+        date_layout.addWidget(export_label)
+        
+        # PDF Button
+        pdf_btn = QPushButton("PDF")
+        pdf_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #D32F2F; /* Red for PDF */
+                color: white;
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-weight: 500;
+                height: 35px;
+            }
+            QPushButton:hover { background-color: #C62828; }
+        """)
+        pdf_btn.clicked.connect(self.on_pdf_export_clicked)
+        date_layout.addWidget(pdf_btn)
+        
+        # Excel Button
+        excel_btn = QPushButton("Excel")
+        excel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #388E3C; /* Green for Excel */
+                color: white;
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-weight: 500;
+                height: 35px;
+            }
+            QPushButton:hover { background-color: #2E7D32; }
+        """)
+        excel_btn.clicked.connect(self.on_excel_export_clicked)
+        date_layout.addWidget(excel_btn)
+        
+        # Print Button
+        print_btn = QPushButton("Print")
+        print_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #0288D1; /* Light Blue for Print */
+                color: white;
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-weight: 500;
+                height: 35px;
+            }
+            QPushButton:hover { background-color: #0277BD; }
+        """)
+        print_btn.clicked.connect(self.on_print_clicked)
+        date_layout.addWidget(print_btn)
+        # --- End Export Actions Bar ---
+        
         main_layout.addWidget(date_range_group)
         
         self.report_tabs = QTabWidget()
@@ -177,7 +232,10 @@ class ReportsScreen(QWidget):
         self.report_tabs.setTabVisible(4, True)  # Daily Sales
         self.load_report_data()
     
-    def create_export_row(self):
+    def create_export_row(self): # This method is no longer used for the top bar.
+        # This method is now obsolete as export buttons are directly integrated into init_ui.
+        # It's kept for now in case other parts of the code still reference it for internal use or are adapted.
+        logger.warning("create_export_row method is deprecated and should no longer be used for top bar export buttons.")
         export_group = QFrame()
         export_layout = QHBoxLayout(export_group)
         export_layout.setContentsMargins(0, 0, 0, 0)
@@ -905,7 +963,7 @@ class ReportsScreen(QWidget):
             pdf.set_fill_color(25, 118, 210) # Navy Blue
             pdf.set_text_color(255, 255, 255)
             pdf.set_font("Arial", 'B', 9)
-            col_width = pdf.epw / len(headers)
+            col_width = (pdf.w - pdf.l_margin - pdf.r_margin) / len(headers) # Corrected line
             for h in headers:
                 pdf.cell(col_width, 10, h, border=1, fill=True, align='C')
             pdf.ln()
@@ -961,11 +1019,12 @@ class ReportsScreen(QWidget):
             pdf.ln(5)
             
             pdf.set_font("Arial", 'B', 9)
-            col_width = pdf.epw / len(headers)
+            col_width = (pdf.w - pdf.l_margin - pdf.r_margin) / len(headers) # Corrected line
             for h in headers:
                 pdf.cell(col_width, 8, h, border=1)
             pdf.ln()
             
+            pdf.set_text_color(0, 0, 0)
             pdf.set_font("Arial", '', 8)
             for row in data:
                 for item in row:
