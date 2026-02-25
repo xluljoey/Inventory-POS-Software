@@ -198,15 +198,15 @@ class ReportsScreen(QWidget):
         card.setStyleSheet(f"QFrame#summaryCard {{ background-color: {color}; border-radius: 10px; border: none; }}")
         
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(15, 10, 15, 10)
+        layout.setContentsMargins(10, 5, 10, 5) # Tighten internal padding
         layout.setSpacing(4)
         
         title_label = QLabel(title)
-        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 11px; font-weight: 500;")
+        title_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 9px; font-weight: 500;") # Reduced font size
         layout.addWidget(title_label)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
+        value_label.setStyleSheet("color: white; font-size: 14px; font-weight: bold;") # Reduced font size
         value_label.setObjectName("value_label")
         layout.addWidget(value_label)
         
@@ -221,30 +221,22 @@ class ReportsScreen(QWidget):
         layout.setSpacing(15) # Updated spacing
         
         top_row = QHBoxLayout()
-        top_row.setSpacing(10)
+        top_row.setSpacing(5) # Reduced spacing
         
         self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
-        self.total_sales_card.setFixedSize(160, 120) # Fixed size for consistency
-        self.total_sales_card.setMaximumHeight(150)
-        self.total_sales_card.setMinimumHeight(120)
+        self.total_sales_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
         top_row.addWidget(self.total_sales_card)
         
         self.total_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
-        self.total_transactions_card.setFixedSize(140, 120) # Fixed size for consistency
-        self.total_transactions_card.setMaximumHeight(150)
-        self.total_transactions_card.setMinimumHeight(120)
+        self.total_transactions_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
         top_row.addWidget(self.total_transactions_card)
         
         self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
-        self.avg_transaction_card.setFixedSize(160, 120) # Fixed size for consistency
-        self.avg_transaction_card.setMaximumHeight(150)
-        self.avg_transaction_card.setMinimumHeight(120)
+        self.avg_transaction_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
         top_row.addWidget(self.avg_transaction_card)
         
         self.top_product_card = self.create_summary_card("Top Product", "N/A", "#9c27b0")
-        self.top_product_card.setFixedSize(160, 120) # Fixed size for consistency
-        self.top_product_card.setMaximumHeight(150)
-        self.top_product_card.setMinimumHeight(120)
+        self.top_product_card.setFixedHeight(100) # Forcing the specific slim height seen in Inventory tab
         top_row.addWidget(self.top_product_card)
         
         top_row.addStretch()
@@ -274,6 +266,8 @@ class ReportsScreen(QWidget):
         self.sales_table_stack.addWidget(self.sales_table)
         self.sales_table_stack.addWidget(self.sales_empty_state)
         layout.addWidget(self.sales_table_stack)
+        
+        layout.addStretch(1) # Added stretch
         
         layout.setStretch(0, 0) # Cards container (top_row)
         layout.setStretch(1, 1) # Table container (sales_table_stack)
