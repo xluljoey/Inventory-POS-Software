@@ -7,8 +7,6 @@ from PySide6.QtGui import QFont, QPixmap, QIcon, QPalette, QPainter, QCursor, QC
 
 from database.models import User
 from services.inventory_service import InventoryService
-from services.sales_service import SalesService
-from services.customer_service import CustomerService
 from datetime import datetime, timedelta
 from ui.product_list_dialog import ProductListDialog
 
@@ -404,8 +402,13 @@ class DashboardScreen(QWidget):
             return
             
         try:
-            # Update Sync Label
+            # SPRINT FIX: Local imports to avoid circular dependencies
+            from services.sales_service import SalesService
+            from services.customer_service import CustomerService
+            from services.inventory_service import InventoryService
             from database.database import DatabaseService
+
+            # Update Sync Label
             sync_setting = DatabaseService.get_setting("last_cloud_sync")
             if sync_setting:
                 self.sync_label.setText(f"Last Cloud Sync: {sync_setting.value}")
@@ -434,11 +437,10 @@ class DashboardScreen(QWidget):
             self.standard_inventory_card.value_label.setText(str(expired))
             
             # Get sales data for overview cards (visible to all)
-            from datetime import datetime, timedelta
             today = datetime.now().date()
             
             # Calculate today's sales
-            sales_summary = SalesService.get_daily_sales_summary(today)
+            sales_summary = DatabaseService.get_daily_sales_summary(today)
             today_sales = sales_summary.get('total_revenue', 0.0) if sales_summary else 0.0
             
             # Calculate total orders (simplified - using recent sales as proxy)
@@ -463,7 +465,6 @@ class DashboardScreen(QWidget):
             self.total_customers_card.value_label.setText(str(total_customers))
             
             # --- UPDATE RECENT ACTIVITY (Combined Sales and System Activities) ---
-            from database.database import DatabaseService
             activities = DatabaseService.get_recent_activities(10)
             
             # Convert sales to a similar format
@@ -531,9 +532,27 @@ class DashboardScreen(QWidget):
                 pass
                 
         except Exception as e:
-            # Silent failure fixed: Alert user
-            QMessageBox.critical(self, "Dashboard Error", f"Failed to update dashboard: {str(e)}")
-            print(f"Error updating dashboard: {e}")
+            # Log error and apply safe fallbacks instead of showing a blocking popup
+            import traceback
+            print(f"Dashboard Update Error: {e}")
+            print(traceback.format_exc())
+            try:
+                # Safe defaults
+                self.sync_label.setText("Last Cloud Sync: Unknown")
+                self.out_of_stock_card.value_label.setText("0")
+                self.below_minimum_card.value_label.setText("0")
+                self.low_stock_card.value_label.setText("0")
+                self.standard_inventory_card.value_label.setText("0")
+                self.total_sales_card.value_label.setText("GH₵0.00")
+                self.total_orders_card.value_label.setText("0")
+                self.avg_sales_card.value_label.setText("GH₵0.00")
+                self.total_customers_card.value_label.setText("0")
+                # Clear activity table
+                if hasattr(self, 'activity_table'):
+                    self.activity_table.setRowCount(0)
+            except Exception:
+                # If even fallback UI updates fail, fail silently to avoid crash loops
+                print("Dashboard fallback update also failed")
 
     def closeEvent(self, event):
         """Stop timer when screen is closed"""

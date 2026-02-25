@@ -1,8 +1,9 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from loguru import logger
 from database.database import DatabaseService
 from database.models import Sale, SaleItem, CustomerPayment
+from services.customer_service import CustomerService # SPRINT FIX: Import CustomerService
 
 class SalesService:
     """Service for sales and POS operations"""
@@ -40,166 +41,63 @@ class SalesService:
         if sale_id:
             logger.info(f"Sale completed: ID #{sale_id} | Total: {sale.total_amount} | Cashier: {sale.cashier_user}")
 
-        # Handle partial payment for credit sales
-        if sale.payment_method == 'credit' and sale.customer_id:
-            amount_paid = sale_data.get('amount_paid', 0.0)
-            if amount_paid > 0:
-                payment = CustomerPayment(
-                    customer_id=sale.customer_id,
-                    amount=amount_paid,
-                    date=sale.date,
-                    payment_method='Cash',  # Assumed cash for partial payment
-                    notes=f'Partial payment for Sale #{sale_id}'
-                )
-                DatabaseService.create_customer_payment(payment)
+        # The logic to handle outstanding balance update is now in DatabaseService.create_sale
+        # and partial payments are handled there by calculating unpaid_amount.
+        # No need to create a separate CustomerPayment here for the 'amount_paid' part of a credit sale.
         
         return sale_id
     
     @staticmethod
-    def get_sale_by_id(sale_id: int) -> Optional[dict]:
-        """Get a sale by ID"""
-        sale = DatabaseService.get_sale_by_id(sale_id)
-        if sale:
-            return {
-                'id': sale.id,
-                'date': sale.date.isoformat() if sale.date else None,
-                'total_amount': sale.total_amount,
-                'payment_method': sale.payment_method,
-                'customer_id': sale.customer_id,
-                'cashier_user': sale.cashier_user,
-                'items': [
-                    {
-                        'id': item.id,
-                        'sale_id': item.sale_id,
-                        'product_id': item.product_id,
-                        'product_name': item.product_name,
-                        'quantity': item.quantity,
-                        'unit_price': item.unit_price,
-                        'subtotal': item.subtotal
-                    }
-                    for item in sale.items
-                ]
-            }
-        return None
-    
-    @staticmethod
-    def get_sales_by_date_range(start_date: datetime, end_date: datetime) -> List[dict]:
-        """Get sales within a date range"""
-        sales = DatabaseService.get_sales_by_date_range(start_date, end_date)
-        return [
-            {
-                'id': sale.id,
-                'date': sale.date.isoformat() if sale.date else None,
-                'total_amount': sale.total_amount,
-                'amount_paid': sale.amount_paid,
-                'payment_method': sale.payment_method,
-                'customer_id': sale.customer_id,
-                'cashier_user': sale.cashier_user,
-                'items': [
-                    {
-                        'id': item.id,
-                        'sale_id': item.sale_id,
-                        'product_id': item.product_id,
-                        'product_name': item.product_name,
-                        'quantity': item.quantity,
-                        'unit_price': item.unit_price,
-                        'subtotal': item.subtotal
-                    }
-                    for item in sale.items
-                ]
-            }
-            for sale in sales
-        ]
-
-    @staticmethod
-    def get_sales_by_customer(customer_id: int) -> List[dict]:
-        """Get all sales for a specific customer"""
-        sales = DatabaseService.get_sales_by_customer_id(customer_id)
-        return [
-            {
-                'id': sale.id,
-                'date': sale.date.isoformat() if sale.date else None,
-                'total_amount': sale.total_amount,
-                'amount_paid': sale.amount_paid,
-                'payment_method': sale.payment_method,
-                'customer_id': sale.customer_id,
-                'cashier_user': sale.cashier_user,
-                'items': [
-                    {
-                        'id': item.id,
-                        'sale_id': item.sale_id,
-                        'product_id': item.product_id,
-                        'product_name': item.product_name,
-                        'quantity': item.quantity,
-                        'unit_price': item.unit_price,
-                        'subtotal': item.subtotal
-                    }
-                    for item in sale.items
-                ]
-            }
-            for sale in sales
-        ]
-    
-    @staticmethod
-    def get_daily_sales_summary(date: datetime) -> dict:
-        """Get daily sales summary for a specific date"""
-        return DatabaseService.get_daily_sales_summary(date)
-    
-    @staticmethod
-    def get_total_daily_sales(date: datetime) -> float:
-        """Get total sales amount for a specific date"""
-        summary = DatabaseService.get_daily_sales_summary(date)
-        return summary.get('total_revenue', 0.0)
-    
-    @staticmethod
-    def get_daily_transaction_count(date: datetime) -> int:
-        """Get number of transactions for a specific date"""
-        summary = DatabaseService.get_daily_sales_summary(date)
-        return summary.get('total_transactions', 0)
-    
-    @staticmethod
-    def calculate_change(tendered_amount: float, total_amount: float) -> float:
-        """Calculate change to give to customer"""
-        return tendered_amount - total_amount
-    
-    @staticmethod
-    def get_recent_sales(limit: int = 10) -> List[dict]:
-        """Get recent sales ordered by date"""
-        from datetime import datetime, timedelta
-        from services.customer_service import CustomerService
-        
-        # Calculate date range for recent sales (last 7 days)
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
-        
-        # Get all sales in the date range
-        all_sales = SalesService.get_sales_by_date_range(start_date, end_date)
-        
-        # Sort by date (most recent first) and limit results
-        sorted_sales = sorted(all_sales, key=lambda x: x['date'], reverse=True)
-        recent_sales = sorted_sales[:limit]
-        
-        # Add customer names to each sale
-        for sale in recent_sales:
-            if sale.get('customer_id'):
-                customer = CustomerService.get_customer_by_id(sale['customer_id'])
-                if customer:
-                    sale['customer_name'] = customer['name']
-                else:
-                    sale['customer_name'] = 'Unknown'
-            else:
-                sale['customer_name'] = 'Walk-in Customer'
-        
-        return recent_sales
-    
-    @staticmethod
     def process_payment(sale_data: dict) -> int:
-        """Process a payment and create a sale"""
+        """Process a payment and create a sale, including credit limit checks."""
         # Validate that we have enough stock for all items
         for item in sale_data['items']:
             product = DatabaseService.get_product_by_id(item['product_id'])
             if not product or product.quantity < item['quantity']:
                 raise ValueError(f"Insufficient stock for product: {item['product_name']}")
         
+        # SPRINT FIX: Credit limit check for credit sales
+        if sale_data['payment_method'] == 'credit':
+            customer_id = sale_data.get('customer_id')
+            if not customer_id:
+                raise ValueError("Credit sale requires a customer.")
+            
+            customer = CustomerService.get_customer_by_id(customer_id)
+            if not customer:
+                raise ValueError(f"Customer with ID {customer_id} not found.")
+            
+            total_sale_amount = sale_data['total_amount']
+            amount_paid_now = sale_data.get('amount_paid', 0.0)
+            amount_to_add_to_credit = total_sale_amount - amount_paid_now
+
+            new_outstanding_balance = customer['outstanding_balance'] + amount_to_add_to_credit
+            
+            if new_outstanding_balance > customer['credit_limit']:
+                raise ValueError(
+                    f"Credit limit exceeded for {customer['name']}. "
+                    f"Available credit: GH₵{customer['available_credit']:.2f}, "
+                    f"Sale amount: GH₵{total_sale_amount:.2f}, "
+                    f"New outstanding: GH₵{new_outstanding_balance:.2f}."
+                )
+        
         # Create the sale
         return SalesService.create_sale(sale_data)
+
+    @staticmethod
+    def get_recent_sales(days: int = 30) -> List[dict]:
+        """Get sales from the last N days."""
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # DatabaseService.get_sales_by_date_range now returns dictionaries
+        sales = DatabaseService.get_sales_by_date_range(start_date, end_date)
+        
+        # Add customer_name to each sale dictionary if customer_id is present
+        result = []
+        for sale_dict in sales: # 'sale_dict' is already a dictionary
+            if sale_dict.get('customer_id'):
+                customer = DatabaseService.get_customer_by_id(sale_dict['customer_id']) # Returns Customer object
+                if customer:
+                    sale_dict['customer_name'] = customer.name # Access attribute directly
+            result.append(sale_dict)
+        return result

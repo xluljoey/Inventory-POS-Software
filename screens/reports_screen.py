@@ -2,7 +2,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QLabel, QPushButton, QFrame, QTableWidget, 
                                QTableWidgetItem, QComboBox, QHeaderView, 
                                QAbstractItemView, QGroupBox, QDateEdit,
-                               QCalendarWidget, QTabWidget, QMessageBox, QFileDialog)
+                               QCalendarWidget, QTabWidget, QMessageBox, QFileDialog,
+                               QStackedWidget)
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor
 from loguru import logger
@@ -11,11 +12,13 @@ from fpdf import FPDF
 import os
 
 from database.models import User
-from services.sales_service import SalesService
 from services.inventory_service import InventoryService
 from services.customer_service import CustomerService
+from services.sales_service import SalesService
+from database.database import DatabaseService
 from config.app_config import AppConfig
 from datetime import datetime, timedelta
+from ui.common_widgets import EmptyStateWidget
 
 
 class ReportsScreen(QWidget):
@@ -25,6 +28,15 @@ class ReportsScreen(QWidget):
         super().__init__()
         self.current_user = None
         self.init_ui()
+
+    def _create_table_stack(self, table_widget, icon, message):
+        """Helper to create a QStackedWidget for a table and its empty state."""
+        stack = QStackedWidget()
+        empty_widget = EmptyStateWidget(icon, message)
+        stack.addWidget(table_widget)
+        stack.addWidget(empty_widget)
+        # Store widgets for easy access
+        return stack, table_widget, empty_widget
         
     def init_ui(self):
         """Initialize the reports screen UI"""
@@ -496,7 +508,7 @@ class ReportsScreen(QWidget):
     
     def load_sales_data(self, start_date, end_date):
         try:
-            sales_data = SalesService.get_sales_by_date_range(start_date, end_date)
+            sales_data = DatabaseService.get_sales_by_date_range(start_date, end_date)
             total_sales = sum(sale['total_amount'] for sale in sales_data)
             total_transactions = len(sales_data)
             avg_transaction = total_sales / total_transactions if total_transactions > 0 else 0
@@ -637,7 +649,7 @@ class ReportsScreen(QWidget):
 
     def load_financial_data(self, start, end):
         try:
-            sales = SalesService.get_sales_by_date_range(start, end)
+            sales = DatabaseService.get_sales_by_date_range(start, end)
             rev = sum(s['total_amount'] for s in sales)
             cost = 0
             for s in sales:
@@ -667,7 +679,7 @@ class ReportsScreen(QWidget):
             today = datetime.now().date()
             start = datetime.combine(today, datetime.min.time())
             end = datetime.combine(today, datetime.max.time())
-            sales = SalesService.get_sales_by_date_range(start, end)
+            sales = DatabaseService.get_sales_by_date_range(start, end)
             
             total_sales = sum(sale['total_amount'] for sale in sales)
             total_transactions = len(sales)

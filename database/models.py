@@ -73,6 +73,21 @@ class Customer:
         """Calculate available credit"""
         return self.credit_limit - self.outstanding_balance
 
+    def to_dict(self):
+        """Convert Customer object to a dictionary."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "phone": self.phone,
+            "email": self.email,
+            "address": self.address,
+            "credit_limit": self.credit_limit,
+            "outstanding_balance": self.outstanding_balance,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "available_credit": self.available_credit
+        }
+
 @dataclass
 class Sale:
     """Sale model"""
@@ -92,6 +107,20 @@ class Sale:
         if self.date is None:
             self.date = datetime.now()
 
+    def to_dict(self):
+        """Convert Sale object to a dictionary."""
+        return {
+            "id": self.id,
+            "date": self.date.isoformat() if self.date else None,
+            "total_amount": self.total_amount,
+            "amount_paid": self.amount_paid,
+            "payment_method": self.payment_method,
+            "customer_id": self.customer_id,
+            "cashier_user": self.cashier_user,
+            "sync_status": self.sync_status,
+            "items": [item.to_dict() for item in self.items] # Assuming SaleItem also has to_dict
+        }
+
 @dataclass
 class SaleItem:
     """Sale item model"""
@@ -102,6 +131,18 @@ class SaleItem:
     quantity: float = 0.0
     unit_price: float = 0.0
     subtotal: float = 0.0
+
+    def to_dict(self):
+        """Convert SaleItem object to a dictionary."""
+        return {
+            "id": self.id,
+            "sale_id": self.sale_id,
+            "product_id": self.product_id,
+            "product_name": self.product_name,
+            "quantity": self.quantity,
+            "unit_price": self.unit_price,
+            "subtotal": self.subtotal,
+        }
 
 @dataclass
 class StockMovement:

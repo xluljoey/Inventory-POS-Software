@@ -311,7 +311,7 @@ class DatabaseService:
                 unpaid_amount = sale.total_amount - sale.amount_paid
                 if unpaid_amount > 0:
                     cursor.execute('''
-                        UPDATE customers SET outstanding_balance = outstanding_balance + ?
+                        UPDATE customers SET outstanding_balance = outstanding_balance + ?, updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     ''', (unpaid_amount, sale.customer_id))
 
@@ -358,8 +358,8 @@ class DatabaseService:
             ''', (start_date.isoformat(), end_date.isoformat()))
             sale_rows = cursor.fetchall()
             
-            # Create sale objects
-            sales = []
+            # Create sale objects and convert to dictionaries
+            sales_dicts = []
             for row in sale_rows:
                 sale = DatabaseService._row_to_sale(row)
                 
@@ -373,9 +373,9 @@ class DatabaseService:
                 item_rows = cursor.fetchall()
                 sale.items = [DatabaseService._row_to_sale_item(row) for row in item_rows]
                 
-                sales.append(sale)
+                sales_dicts.append(sale.to_dict())
             
-            return sales
+            return sales_dicts
 
     @staticmethod
     def get_sales_by_customer_id(customer_id: int) -> List[Sale]:
@@ -390,7 +390,7 @@ class DatabaseService:
             ''', (customer_id,))
             sale_rows = cursor.fetchall()
             
-            sales = []
+            sales_dicts = []
             for row in sale_rows:
                 sale = DatabaseService._row_to_sale(row)
                 # Get items
@@ -402,9 +402,9 @@ class DatabaseService:
                 ''', (sale.id,))
                 item_rows = cursor.fetchall()
                 sale.items = [DatabaseService._row_to_sale_item(row) for row in item_rows]
-                sales.append(sale)
+                sales_dicts.append(sale.to_dict())
             
-            return sales
+            return sales_dicts
     
     @staticmethod
     def get_daily_sales_summary(date: datetime) -> dict:
