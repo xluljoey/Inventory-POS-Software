@@ -6,6 +6,7 @@ from PySide6.QtGui import QFont, QPalette, QLinearGradient, QBrush, QPixmap
 
 from services.auth_service import AuthService
 from database.models import User
+from database.database import DatabaseService
 
 
 class LoginScreen(QWidget):
@@ -54,14 +55,18 @@ class LoginScreen(QWidget):
         card_layout.setSpacing(24)
         
         # Company title
-        title_label = QLabel("COMPANY")
+        from config.app_config import AppConfig # Temporarily import AppConfig to get CURRENCY_SYMBOL
+        store_name_setting = DatabaseService.get_setting("business_name")
+        store_name = store_name_setting.value if store_name_setting and store_name_setting.value.strip() else "INVENTORY SYSTEM"
+        
+        title_label = QLabel(store_name.upper())
         title_label.setObjectName("loginTitle")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
             QLabel#loginTitle {
                 font-size: 24px;
                 font-weight: bold;
-                color: #212121;
+                color: #111827; /* Updated color */
                 margin-bottom: 10px;
             }
         """)
