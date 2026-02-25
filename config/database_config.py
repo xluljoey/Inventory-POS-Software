@@ -2,6 +2,7 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Generator
 from loguru import logger
+from pathlib import Path # Added import
 
 class DatabaseConfig:
     """Database configuration and connection management"""
@@ -32,7 +33,7 @@ class DatabaseConfig:
         db_path = AppConfig.get_db_path()
         
         # Ensure the data directory exists
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True) # Ensure parent directories exist
         
         with sqlite3.connect(db_path) as conn:
             # Create tables
@@ -138,47 +139,28 @@ class DatabaseConfig:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
 
-                                -- Restock history table
-
-                                CREATE TABLE IF NOT EXISTS restock_history (
-
-                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                                    product_id INTEGER,
-
-                                    old_qty REAL,
-
-                                    added_qty REAL,
-
-                                    new_qty REAL,
-
-                                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-                                    FOREIGN KEY(product_id) REFERENCES products (id)
-
-                                );
-
+                -- Restock history table
+                CREATE TABLE IF NOT EXISTS restock_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER,
+                    old_qty REAL,
+                    added_qty REAL,
+                    new_qty REAL,
+                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    record_type TEXT DEFAULT 'Arrival', -- SPRINT 5: Add record_type
+                    FOREIGN KEY(product_id) REFERENCES products (id)
+                );
                 
-
-                                -- Activities table for general logging
-
-                                CREATE TABLE IF NOT EXISTS activities (
-
-                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                                    type TEXT NOT NULL, -- 'price_change', 'stock_correction', 'system', etc.
-
-                                    description TEXT NOT NULL,
-
-                                    user TEXT NOT NULL,
-
-                                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
-                                );
-
+                -- Activities table for general logging
+                CREATE TABLE IF NOT EXISTS activities (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT NOT NULL, -- 'price_change', 'stock_correction', 'system', etc.
+                    description TEXT NOT NULL,
+                    user TEXT NOT NULL,
+                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
                                 
-
-                                -- Settings table
+                -- Settings table
                 CREATE TABLE IF NOT EXISTS settings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     key_name TEXT UNIQUE NOT NULL,
@@ -186,6 +168,12 @@ class DatabaseConfig:
                     description TEXT
                 );
 
+                -- System Info table for versioning and other system-level info
+                CREATE TABLE IF NOT EXISTS system_info (
+                    version_key TEXT PRIMARY KEY,
+                    version_value TEXT
+                );
+                
                 -- Sync_Log table (Premium Sync)
                 CREATE TABLE IF NOT EXISTS Sync_Log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -209,7 +197,7 @@ class DatabaseConfig:
                 INSERT OR IGNORE INTO settings (key_name, value, description) VALUES
                 ('business_name', 'Inventory Management System', 'Name of the business'),
                 ('business_address', '', 'The physical address of the business'),
-                ('currency_symbol', '$', 'Currency symbol to use in the application'),
+                ('currency_symbol', 'GH₵', 'Currency symbol to use in the application'),
                 ('tax_rate', '0.0', 'Default tax rate as decimal (e.g., 0.15 for 15%)'),
                 ('global_markup', '0.0', 'Default markup percentage to apply to products'),
                 ('receipt_header', 'Thank you for your purchase!', 'Header text for receipts'),
@@ -231,29 +219,33 @@ class DatabaseConfig:
                 
             ''')
             
-            # Schema Migration: Add record_type to restock_history if not exists
+            # --- Schema Migrations ---
+            # Migration: Add record_type to restock_history if not exists
             try:
                 conn.execute("ALTER TABLE restock_history ADD COLUMN record_type TEXT DEFAULT 'Arrival'")
             except sqlite3.OperationalError:
-                # Column likely already exists
-                pass
+                pass # Column likely already exists
             
-            # Schema Migration: Add amount_paid to sales if not exists
+            # Migration: Add amount_paid to sales if not exists
             try:
                 conn.execute("ALTER TABLE sales ADD COLUMN amount_paid REAL DEFAULT 0")
             except sqlite3.OperationalError:
                 pass
             
-            # Schema Migration: Add batch_number to products if not exists
+            # Migration: Add batch_number to products if not exists
             try:
                 conn.execute("ALTER TABLE products ADD COLUMN batch_number TEXT")
             except sqlite3.OperationalError:
                 pass
 
-            # Schema Migration: Add sync_status to sales if not exists
+            # Migration: Add sync_status to sales if not exists
             try:
                 conn.execute("ALTER TABLE sales ADD COLUMN sync_status TEXT DEFAULT 'pending'")
             except sqlite3.OperationalError:
                 pass
+
+            # SPRINT 5: Insert database version
+            conn.execute("INSERT OR IGNORE INTO system_info (version_key, version_value) VALUES (?, ?)", 
+                         ('database_version', '1.0'))
                 
             conn.commit()
