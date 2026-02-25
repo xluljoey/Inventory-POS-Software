@@ -217,26 +217,34 @@ class ReportsScreen(QWidget):
     def create_sales_report_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 10, 20, 10) # Updated margins
+        layout.setSpacing(15) # Updated spacing
         
         top_row = QHBoxLayout()
         top_row.setSpacing(10)
         
         self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
-        self.total_sales_card.setFixedWidth(160)
+        self.total_sales_card.setFixedSize(160, 120) # Fixed size for consistency
+        self.total_sales_card.setMaximumHeight(150)
+        self.total_sales_card.setMinimumHeight(120)
         top_row.addWidget(self.total_sales_card)
         
         self.total_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
-        self.total_transactions_card.setFixedWidth(140)
+        self.total_transactions_card.setFixedSize(140, 120) # Fixed size for consistency
+        self.total_transactions_card.setMaximumHeight(150)
+        self.total_transactions_card.setMinimumHeight(120)
         top_row.addWidget(self.total_transactions_card)
         
         self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
-        self.avg_transaction_card.setFixedWidth(160)
+        self.avg_transaction_card.setFixedSize(160, 120) # Fixed size for consistency
+        self.avg_transaction_card.setMaximumHeight(150)
+        self.avg_transaction_card.setMinimumHeight(120)
         top_row.addWidget(self.avg_transaction_card)
         
         self.top_product_card = self.create_summary_card("Top Product", "N/A", "#9c27b0")
-        self.top_product_card.setFixedWidth(160)
+        self.top_product_card.setFixedSize(160, 120) # Fixed size for consistency
+        self.top_product_card.setMaximumHeight(150)
+        self.top_product_card.setMinimumHeight(120)
         top_row.addWidget(self.top_product_card)
         
         top_row.addStretch()
@@ -266,6 +274,9 @@ class ReportsScreen(QWidget):
         self.sales_table_stack.addWidget(self.sales_table)
         self.sales_table_stack.addWidget(self.sales_empty_state)
         layout.addWidget(self.sales_table_stack)
+        
+        layout.setStretch(0, 0) # Cards container (top_row)
+        layout.setStretch(1, 1) # Table container (sales_table_stack)
         return tab
     
     def create_inventory_report_tab(self):
