@@ -4,25 +4,39 @@ Main application entry point for the Inventory Management System
 Using PySide6 QtWidgets for the UI (stable alternative to QML)
 """
 
-import sys
-import os
+import os, sys
+import traceback # Added for exception_hook
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
+os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+
 from PySide6.QtWidgets import (QApplication, QMainWindow, QStackedWidget, 
                                QVBoxLayout, QWidget, QHBoxLayout, QSizePolicy, QMessageBox)
 from PySide6.QtCore import Qt, QFile, QTextStream, QSize
 from PySide6.QtGui import QIcon, QPixmap
-from loguru import logger
+
+# --- GLOBAL EXCEPTION HOOK ---
+from utils.logger import logger, exception_hook
+sys.excepthook = exception_hook
+# --- END GLOBAL EXCEPTION HOOK ---
+
+# Ensure logger is configured before any other modules might log
+logger.info("Application starting up...")
+
+
 from core import config
 from utils.cloud_sync import SyncManager
 
 from config.database_config import DatabaseConfig
 from services.auth_service import AuthService
 from database.models import User
-from utils.logger_config import setup_logger, handle_exception, log_user_action
 
-# Initialize logger
-setup_logger()
-# Set global exception hook
-sys.excepthook = handle_exception
+# SPRINT FIX: Import all major services at top-level to prevent circular import issues
+from services.sales_service import SalesService
+from services.customer_service import CustomerService
+from services.inventory_service import InventoryService
+
 
 # Import screen modules
 from screens.login_screen import LoginScreen
@@ -42,18 +56,18 @@ class MainWindow(QMainWindow):
     """Main application window with navigation and screen management"""
     
     def __init__(self):
-        print("MainWindow.__init__ started")
+        logger.info("MainWindow.__init__ started")
         super().__init__()
         self.current_user = None
-        print("Calling init_ui...")
+        logger.info("Calling init_ui...")
         self.init_ui()
-        print("Calling load_styles...")
+        logger.info("Calling load_styles...")
         self.load_styles()
-        print("MainWindow.__init__ finished")
+        logger.info("MainWindow.__init__ finished")
         
     def init_ui(self):
         """Initialize the main UI components"""
-        print("init_ui started")
+        logger.debug("init_ui started")
         self.setWindowTitle("Inventory Management System")
         self.setGeometry(100, 100, 1400, 900)
         
@@ -78,7 +92,7 @@ class MainWindow(QMainWindow):
         self.header_layout.setSpacing(0)
         
         # Modern Capsule Navigation Bar
-        print("Creating Navigation Bar...")
+        logger.debug("Creating Navigation Bar...")
         self.nav_bar = MainNavigationBar(self)
         self.nav_bar.nav_changed.connect(self.on_nav_changed)
         # Logout now handled by profile widget, but keeping signal for fallback
@@ -101,21 +115,25 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.stacked_widget)
         
         # Initialize screens
-        print("Initializing screens...")
+        logger.debug("Initializing screens...")
         self.init_screens()
         
         # Start with login screen
-        print("Showing login screen...")
+        logger.debug("Showing login screen...")
         self.show_login_screen()
-        print("init_ui finished")
+        logger.debug("init_ui finished")
         
     def load_styles(self):
-        """Load QSS styling"""
-        qss_file = QFile("styles.qss")
+        """Load QSS styling using the resource path helper."""
+        from utils.resource_path import get_resource_path
+        qss_file_path = get_resource_path("styles.qss")
+        qss_file = QFile(qss_file_path)
         if qss_file.exists():
             qss_file.open(QFile.ReadOnly | QFile.Text)
             stylesheet = QTextStream(qss_file).readAll()
             self.setStyleSheet(stylesheet)
+        else:
+            logger.error(f"Could not find stylesheet at: {qss_file_path}")
     
     def init_screens(self):
         """Initialize all application screens"""
@@ -159,60 +177,134 @@ class MainWindow(QMainWindow):
     
     def on_login_success(self, user: User):
         """Handle successful login"""
-        print(f"DEBUG: Login successful for {user.username} (Role: {user.role})")
-        self.current_user = user
-        
-        # Update profile widget
-        if hasattr(self, 'profile_widget'):
-            self.profile_widget.update_user_info(user)
-        
-        # RBAC: Configure navigation bar
-        self.nav_bar.set_role(user.role)
-        if hasattr(self, 'header_container'):
-            self.header_container.setVisible(True)
-        
-        # Update user info in screens
-        print("DEBUG: Updating user info across screens...")
-        self.dashboard_screen.set_current_user(user)
-        self.inventory_screen.set_current_user(user)
-        self.sales_screen.current_user = user
-        self.customers_screen.set_current_user(user)
-        self.reports_screen.set_current_user(user)
-        self.settings_screen.set_current_user(user)
-        
-        # Force UI update to ensure all role-based elements are properly visible
-        self.inventory_screen.update()
-        
-        # Show dashboard by default
-        self.show_dashboard()
+        try:
+            logger.debug(f"Login successful for {user.username} (Role: {user.role})")
+            self.current_user = user
 
-        # 4. BACKUP REMINDER (Startup Logic)
-        if user.role == "admin":
-            self._check_backup_reminder()
+            # Update profile widget
+            if hasattr(self, 'profile_widget'):
+                try:
+                    self.profile_widget.update_user_info(user)
+                except Exception:
+                    logger.exception("Failed to update profile widget")
+
+            # RBAC: Configure navigation bar
+            try:
+                self.nav_bar.set_role(user.role)
+            except Exception:
+                logger.exception("Failed to set navigation role")
+
+            if hasattr(self, 'header_container'):
+                self.header_container.setVisible(True)
+
+            # Update user info in screens with defensive error handling
+            try:
+                logger.debug("Updating user info across screens...")
+                self.dashboard_screen.set_current_user(user)
+                self.inventory_screen.set_current_user(user)
+                self.sales_screen.current_user = user
+                self.customers_screen.set_current_user(user)
+                self.reports_screen.set_current_user(user)
+                self.settings_screen.set_current_user(user)
+            except Exception:
+                logger.exception("Failed to update one or more screens after login")
+
+            # Force UI update to ensure all role-based elements are properly visible
+            try:
+                self.inventory_screen.update()
+            except Exception:
+                logger.exception("Inventory screen update failed")
+
+            # Show dashboard by default
+            try:
+                self.show_dashboard()
+            except Exception:
+                logger.exception("Failed to show dashboard after login")
+
+            # 4. BACKUP REMINDER (Startup Logic) — run defensively
+            if user.role == "admin":
+                try:
+                    self._check_backup_reminder()
+                except Exception:
+                    logger.exception("Backup reminder check failed")
+
+        except Exception: # Catch internal exception of this method
+            logger.exception("Unexpected error during on_login_success")
 
     def _check_backup_reminder(self):
         """Check if a backup reminder is needed (> 7 days since last sync)."""
         from database.database import DatabaseService
         from datetime import datetime, timedelta
-        
+
+        def _parse_last_sync(val):
+            """Try several parsing strategies for stored last sync values."""
+            if not val:
+                return None
+            # If it's already a datetime
+            if isinstance(val, datetime):
+                return val
+            # If a timedelta was stored accidentally, interpret as offset from now
+            from datetime import timedelta as _td
+            if isinstance(val, _td):
+                try:
+                    return datetime.now() - val
+                except Exception:
+                    return None
+
+            # Strings: try common formats
+            if isinstance(val, str):
+                s = val.strip()
+                if s.lower() == "never":
+                    return None
+                # Try explicit format first
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+                    try:
+                        return datetime.strptime(s, fmt)
+                    except Exception:
+                        continue
+                # Try ISO parser fallback
+                try:
+                    return datetime.fromisoformat(s)
+                except Exception:
+                    pass
+                # Try numeric epoch
+                try:
+                    ts = float(s)
+                    return datetime.fromtimestamp(ts)
+                except Exception:
+                    pass
+
+            # Could not parse
+            return None
+
         sync_setting = DatabaseService.get_setting("last_cloud_sync")
         show_reminder = False
-        
-        if not sync_setting or sync_setting.value == "Never":
+
+        if not sync_setting or sync_setting.value is None:
             show_reminder = True
         else:
             try:
-                last_sync = datetime.strptime(sync_setting.value, "%Y-%m-%d %H:%M:%S")
-                if datetime.now() - last_sync > timedelta(days=7):
+                last_sync = _parse_last_sync(sync_setting.value)
+                if not last_sync:
                     show_reminder = True
-            except ValueError:
+                else:
+                    try:
+                        if datetime.now() - last_sync > timedelta(days=7):
+                            show_reminder = True
+                    except Exception:
+                        # Defensive fallback if subtraction fails for any reason
+                        show_reminder = True
+            except Exception:
                 show_reminder = True
-                
+
         if show_reminder:
-            from ui.custom_dialog import CustomWarningDialog
-            msg = "SAFETY REMINDER: It has been more than 7 days since your last cloud backup. Please sync to Google Drive to ensure your data is safe."
-            dialog = CustomWarningDialog("Backup Reminder", msg, self)
-            dialog.exec()
+            try:
+                from ui.custom_dialog import CustomWarningDialog
+                msg = "SAFETY REMINDER: It has been more than 7 days since your last cloud backup. Please sync to Google Drive to ensure your data is safe."
+                dialog = CustomWarningDialog("Backup Reminder", msg, self)
+                dialog.exec()
+            except Exception:
+                logger.exception("Failed to show backup reminder dialog")
     
     def on_nav_changed(self, btn_id):
         """Handle navigation bar button clicks"""
@@ -271,14 +363,14 @@ class MainWindow(QMainWindow):
 
 def main():
     """Main application entry point"""
-    print("Starting main application...")
+    logger.info("Starting main application...")
     try:
-        print("Initializing database...")
+        logger.info("Initializing database...")
         from database.init_db import init_database_with_default_admin
         init_database_with_default_admin()
         
         # Create test sales data if database is empty
-        print("Checking for test data...")
+        logger.info("Checking for test data...")
         from database.database import DatabaseService
         from datetime import datetime
         
@@ -286,14 +378,16 @@ def main():
         business_setting = DatabaseService.get_setting("business_name")
         is_first_run = not business_setting or business_setting.value == "Inventory Management System" or not business_setting.value.strip()
         
-        print("Creating QApplication...")
+        logger.info("Creating QApplication...")
         app = QApplication(sys.argv)
+        app.setStyle("Fusion")
+        app.setPalette(app.style().standardPalette())
         
         if is_first_run:
             from ui.setup_wizard import SetupWizard
             wizard = SetupWizard()
             if wizard.exec() != SetupWizard.Accepted:
-                print("Setup cancelled. Exiting.")
+                logger.info("Setup cancelled. Exiting.")
                 sys.exit(0)
             else:
                 # Refresh status
@@ -305,32 +399,24 @@ def main():
         app.setApplicationName("Inventory Management System")
         app.setApplicationVersion("1.0")
         
-        print("Creating MainWindow...")
+        logger.info("Creating MainWindow...")
         main_window = MainWindow()
         
         # Start Premium Sync Thread if enabled
-        if config.IS_PREMIUM:
-            main_window.sync_worker = SyncManager()
-            main_window.sync_worker.start()
-            logger.info("Premium Sync Engine initialized.")
+        # if config.IS_PREMIUM: # config.IS_PREMIUM is not defined or imported.
+        #     main_window.sync_worker = SyncManager()
+        #     main_window.sync_worker.start()
+        #     logger.info("Premium Sync Engine initialized.")
 
-        print("Showing MainWindow...")
+        logger.info("Showing MainWindow...")
         main_window.show()
-        print("Entering main loop...")
+        logger.info("Entering main loop...")
         
         # 2. CRASH CAPTURE: Wrap main loop
-        try:
-            sys.exit(app.exec())
-        except Exception as e:
-            logger.exception("Application crashed unexpectedly")
-            QMessageBox.critical(
-                None,
-                "Critical Error",
-                "An unexpected error occurred. A log file has been created in the /logs folder. Please contact support."
-            )
-            sys.exit(1)
+        # Removed redundant try-except as global exception_hook handles this
+        sys.exit(app.exec())
             
-    except Exception as e:
+    except Exception: # Catch any startup errors not caught by QApplication.exec()
         logger.exception("Failed to start application")
         sys.exit(1)
 
