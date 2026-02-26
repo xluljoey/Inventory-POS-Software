@@ -75,19 +75,19 @@ class DashboardScreen(QWidget):
         stats_widget.setObjectName("statsWidget")
         stats_layout = QGridLayout(stats_widget)
         stats_layout.setContentsMargins(0, 0, 0, 0)
-        stats_layout.setSpacing(16)  # Grid spacing as per spec
+        stats_layout.setSpacing(15)  # Grid spacing as per spec
         
         # Create stats cards with design matching Customers screen cards
-        # Inventory Stats (Admin Only)
-        self.out_of_stock_card = self.create_kpi_card("Out of Stock", "0", "#E74C3C", self.show_out_of_stock_dialog)
-        self.below_minimum_card = self.create_kpi_card("Near Expiry", "0", "#F39C12", self.show_near_expiry_dialog)
-        self.low_stock_card = self.create_kpi_card("Low Stock", "0", "#AF7AC5", self.show_low_stock_dialog)
-        self.standard_inventory_card = self.create_kpi_card("Expired Products", "0", "#2C3E50", self.show_expired_products_dialog)
+        # Inventory Stats (Admin Only) - Color Blocked style
+        self.out_of_stock_card = self.create_kpi_card("Out of Stock", "0", "#EF4444", self.show_out_of_stock_dialog)
+        self.below_minimum_card = self.create_kpi_card("Near Expiry", "0", "#F59E0B", self.show_near_expiry_dialog)
+        self.low_stock_card = self.create_kpi_card("Low Stock", "0", "#A855F7", self.show_low_stock_dialog)
+        self.standard_inventory_card = self.create_kpi_card("Expired Products", "0", "#374151", self.show_expired_products_dialog)
         
         # Sales & Customer Overview Cards (Visible to all)
-        self.total_sales_card = self.create_kpi_card("Today's Revenue", f"{self.get_currency_symbol()}0", "#192A56", self.go_to_daily_sales) # Replaced GH₵
+        self.total_sales_card = self.create_kpi_card("Today's Revenue", f"{self.get_currency_symbol()}0", "#192A56", self.go_to_daily_sales)
         self.total_orders_card = self.create_kpi_card("Total Orders", "0", "#192A56")
-        self.avg_sales_card = self.create_kpi_card("Average Sales", f"{self.get_currency_symbol()}0", "#4A76D9") # Replaced GH₵
+        self.avg_sales_card = self.create_kpi_card("Average Sales", f"{self.get_currency_symbol()}0", "#4A76D9")
         self.total_customers_card = self.create_kpi_card("Total Customers", "0", "#00BCD4", self.go_to_customers)
         
         # Add cards to grid
@@ -228,64 +228,77 @@ class DashboardScreen(QWidget):
         activity_layout.addWidget(activity_frame)
         main_layout.addWidget(activity_widget, 1) # Set stretch factor to 1 to fill space
         
-        # Removed main_layout.addStretch() to allow activity_widget to reach the bottom
-    
     def create_kpi_card(self, title, value, bg_color, on_click=None):
-        """Create a KPI card with a solid flat background color"""
+        """Create a KPI card with TILE structure (Header + Body)"""
         if on_click:
             card = ClickableCard()
             card.clicked.connect(on_click)
         else:
             card = QFrame()
             
-        card.setFixedHeight(120)
+        card.setFixedSize(280, 150)
         
         card.setStyleSheet(f"""
             QFrame {{
-                background-color: {bg_color};
-                border-radius: 10px;
+                background-color: transparent;
+                border-radius: 12px;
                 border: none;
             }}
         """)
         
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(8)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(0, 0, 0, 0)
+        card_layout.setSpacing(0)
         
-        # Title
+        # TOP SECTION (Header)
+        header_section = QFrame()
+        header_section.setFixedHeight(60)
+        header_section.setStyleSheet(f"""
+            QFrame {{
+                background-color: {bg_color};
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+                border-bottom-left-radius: 0px;
+                border-bottom-right-radius: 0px;
+            }}
+        """)
+        header_layout = QVBoxLayout(header_section)
+        header_layout.setContentsMargins(15, 10, 15, 10)
+        
         title_label = QLabel(title)
-        title_label.setStyleSheet("""
-            font-size: 14px;
-            font-weight: 500;
-            color: white;
-            opacity: 0.9;
-            background: transparent;
-        """)
-        layout.addWidget(title_label)
+        title_label.setStyleSheet("color: white; font-size: 15px; font-weight: 600; background: transparent;")
+        header_layout.addWidget(title_label)
         
-        # Value
-        value_label = QLabel(value)
-        value_label.setStyleSheet("""
-            font-size: 28px;
-            font-weight: bold;
-            color: white;
-            background: transparent;
-        """)
-        layout.addWidget(value_label)
-        
-        # Click hint
         if on_click:
             hint_label = QLabel("click to view")
-            hint_label.setStyleSheet("""
-                font-size: 10px;
-                color: rgba(255, 255, 255, 0.7);
-                font-style: italic;
-                background: transparent;
-            """)
+            hint_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 10px; font-style: italic; background: transparent;")
             hint_label.setAlignment(Qt.AlignRight)
-            layout.addWidget(hint_label)
+            header_layout.addWidget(hint_label)
         else:
-            layout.addStretch()
+            header_layout.addStretch()
+
+        card_layout.addWidget(header_section)
+        
+        # BOTTOM SECTION (Body)
+        body_section = QFrame()
+        body_section.setStyleSheet("""
+            QFrame {
+                background-color: #2C3E50;
+                border-top-left-radius: 0px;
+                border-top-right-radius: 0px;
+                border-bottom-left-radius: 12px;
+                border-bottom-right-radius: 12px;
+            }
+        """)
+        body_layout = QVBoxLayout(body_section)
+        body_layout.setContentsMargins(15, 10, 15, 10)
+        body_layout.setAlignment(Qt.AlignCenter)
+        
+        value_label = QLabel(value)
+        value_label.setStyleSheet("color: white; font-size: 32px; font-weight: bold; background: transparent;")
+        body_layout.addWidget(value_label)
+        
+        card_layout.addWidget(body_section)
         
         # Store reference for updates
         card.value_label = value_label
@@ -342,10 +355,10 @@ class DashboardScreen(QWidget):
                 min-width: 120px;
             }}
             QPushButton#actionButton:hover {{
-                background-color: #1565C0;
+                opacity: 0.9;
             }}
             QPushButton#actionButton:pressed {{
-                background-color: #0D47A1;
+                opacity: 0.8;
             }}
         """)
         return button
@@ -463,9 +476,9 @@ class DashboardScreen(QWidget):
             total_customers = len(all_customers) if all_customers else 0
             
             # Update overview cards
-            self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}{today_sales:,.2f}") # Replaced GH₵
+            self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}{today_sales:,.2f}")
             self.total_orders_card.value_label.setText(str(total_orders))
-            self.avg_sales_card.value_label.setText(f"{self.get_currency_symbol()}{avg_sales:,.2f}") # Replaced GH₵
+            self.avg_sales_card.value_label.setText(f"{self.get_currency_symbol()}{avg_sales:,.2f}")
             self.total_customers_card.value_label.setText(str(total_customers))
             
             # --- UPDATE RECENT ACTIVITY (Combined Sales and System Activities) ---
@@ -488,7 +501,7 @@ class DashboardScreen(QWidget):
                 customer_name = sale.get('customer_name', 'Walk-in')
                 combined_activities.append({
                     'date': sale['date'],
-                    'description': f"New Sale to {customer_name}: {self.get_currency_symbol()} {sale['total_amount']:.2f}", # Replaced GH₵
+                    'description': f"New Sale to {customer_name}: {self.get_currency_symbol()} {sale['total_amount']:.2f}",
                     'user': sale['cashier_user'],
                     'type': 'sale'
                 })
@@ -547,9 +560,9 @@ class DashboardScreen(QWidget):
                 self.below_minimum_card.value_label.setText("0")
                 self.low_stock_card.value_label.setText("0")
                 self.standard_inventory_card.value_label.setText("0")
-                self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00") # Replaced GH₵
+                self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
                 self.total_orders_card.value_label.setText("0")
-                self.avg_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00") # Replaced GH₵
+                self.avg_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00")
                 self.total_customers_card.value_label.setText("0")
                 # Clear activity table
                 if hasattr(self, 'activity_table'):

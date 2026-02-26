@@ -402,44 +402,51 @@ class CustomersScreen(QWidget):
             actions_layout.addWidget(view_btn)
 
             # Admin only actions
-            if self.current_user and self.current_user.role == "admin":
-                edit_btn = QPushButton("✏️ Edit")
-                edit_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #ffc107;
-                        color: #333333;
-                        border: none;
-                        border-radius: 4px;
-                        padding: 4px 8px;
-                        font-size: 11px;
-                        font-weight: 600;
-                        min-height: 24px;
-                    }
-                    QPushButton:hover {
-                        background-color: #ffb300;
-                    }
-                """)
-                edit_btn.clicked.connect(lambda checked=False, r=row: self.edit_customer(r))
-                actions_layout.addWidget(edit_btn)
-                
-                delete_btn = QPushButton("🗑️ Delete")
-                delete_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #f44336;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        padding: 4px 8px;
-                        font-size: 11px;
-                        font-weight: 600;
-                        min-height: 24px;
-                    }
-                    QPushButton:hover {
-                        background-color: #e53935;
-                    }
-                """)
-                delete_btn.clicked.connect(lambda checked=False, r=row: self.delete_customer(r))
-                actions_layout.addWidget(delete_btn)
+            is_admin = (self.current_user and self.current_user.role == "admin")
+
+            edit_btn = QPushButton("✏️ Edit")
+            edit_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffc107;
+                    color: #333333;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    min-height: 24px;
+                }
+                QPushButton:hover {
+                    background-color: #ffb300;
+                }
+            """)
+            edit_btn.clicked.connect(lambda checked=False, r=row: self.edit_customer(r))
+            edit_btn.setEnabled(is_admin) # Disable for sales rep
+            if not is_admin:
+                edit_btn.setToolTip("Admin privileges required to edit customers.")
+            actions_layout.addWidget(edit_btn)
+            
+            delete_btn = QPushButton("🗑️ Delete")
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #f44336;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    min-height: 24px;
+                }
+                QPushButton:hover {
+                    background-color: #e53935;
+                }
+            """)
+            delete_btn.clicked.connect(lambda checked=False, r=row: self.delete_customer(r))
+            delete_btn.setEnabled(is_admin) # Disable for sales rep
+            if not is_admin:
+                delete_btn.setToolTip("Admin privileges required to delete customers.")
+            actions_layout.addWidget(delete_btn)
             
             self.customers_table.setCellWidget(row, 4, actions_widget)
     
@@ -454,6 +461,9 @@ class CustomersScreen(QWidget):
             self.display_customers(filtered)
     
     def on_add_customer_clicked(self):
+        if self.current_user and self.current_user.role != "admin":
+            CustomWarningDialog("Access Denied", "Admin privileges required to add customers.", self).exec()
+            return
         try:
             dialog = AddCustomerDialog(self)
             if dialog.exec() == QDialog.Accepted:
@@ -472,7 +482,7 @@ class CustomersScreen(QWidget):
         customer_data = next((c for c in self.all_customers if c["id"] == customer_id), None)
         
         if customer_data:
-            dialog = CustomerHistoryDialog(self, customer_data)
+            dialog = CustomerHistoryDialog(self, customer_data, self.current_user) # Pass current user
             dialog.exec()
     
     def edit_customer(self, row):
@@ -515,9 +525,10 @@ class CustomersScreen(QWidget):
 class CustomerHistoryDialog(QDialog):
     """Redesigned Customer View with 3 Tabs: Sales, Credit, Payment History"""
     
-    def __init__(self, parent=None, customer_data=None):
+    def __init__(self, parent=None, customer_data=None, current_user=None):
         super().__init__(parent)
         self.customer = customer_data
+        self.current_user = current_user
         self.setWindowTitle(f"Customer Details - {self.customer['name']}")
         self.setModal(True)
         self.setMinimumSize(900, 700)
@@ -567,8 +578,16 @@ class CustomerHistoryDialog(QDialog):
                 font-weight: bold;
             }
             QPushButton:hover { background-color: #388E3C; }
+            QPushButton:disabled { background-color: #BDBDBD; color: #757575; }
         """)
         self.pay_debt_btn.clicked.connect(self.on_pay_debt_clicked)
+        
+        # RBAC Check for Pay Debt
+        is_admin = (self.current_user and self.current_user.role == "admin")
+        self.pay_debt_btn.setEnabled(is_admin)
+        if not is_admin:
+            self.pay_debt_btn.setToolTip("Admin privileges required to record payments.")
+            
         header_layout.addWidget(self.pay_debt_btn)
         
         layout.addWidget(header_frame)
