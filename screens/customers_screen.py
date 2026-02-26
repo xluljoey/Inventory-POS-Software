@@ -493,7 +493,7 @@ class CustomersScreen(QWidget):
             if CustomerService.update_customer(updated_data):
                 self.load_customer_data()
                 CustomInfoDialog("Success", "Customer updated successfully!", self).exec()
-            else: # <--- This 'else' should be correctly aligned with its 'if'
+            else:
                 CustomErrorDialog("Error", "Failed to update customer", self).exec()
     
     def delete_customer(self, row):

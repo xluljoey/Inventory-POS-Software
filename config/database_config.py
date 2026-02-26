@@ -208,6 +208,8 @@ class DatabaseConfig:
                 ('allow_sales_rep_discounts', '0', 'Permission for sales rep to apply discounts'),
                 ('show_reports_to_sales_rep', '0', 'Permission for sales rep to view reports'),
                 ('show_cost_to_sales_rep', '0', 'Permission for sales rep to view cost price'),
+                ('show_inventory_to_sales_rep', '1', 'Permission for sales rep to view inventory tab'), -- NEW
+                ('show_customers_to_sales_rep', '1', 'Permission for sales rep to view customers tab'), -- NEW
                 ('last_cloud_sync', 'Never', 'Timestamp of the last successful cloud backup');
                 
                 -- Insert default categories
