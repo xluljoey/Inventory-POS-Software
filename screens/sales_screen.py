@@ -11,6 +11,7 @@ from services.inventory_service import InventoryService
 from services.customer_service import CustomerService
 from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog
 from datetime import datetime
+from services.print_service import ReceiptPrinter
 
 
 class SalesScreen(QWidget):
@@ -522,7 +523,21 @@ class SalesScreen(QWidget):
         
         try:
             if SalesService.create_sale(sale):
-                CustomInfoDialog("Success", "Sale completed!", self).exec()
+                # CustomInfoDialog("Success", "Sale completed!", self).exec()
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("Sale Completed")
+                msg_box.setText("Sale completed successfully!")
+                msg_box.setInformativeText("Would you like to print a receipt?")
+                msg_box.setIcon(QMessageBox.Information)
+
+                print_button = msg_box.addButton("Print Receipt", QMessageBox.ActionRole)
+                msg_box.addButton("No, Thanks", QMessageBox.RejectRole)
+                
+                msg_box.exec()
+
+                if msg_box.clickedButton() == print_button:
+                    ReceiptPrinter.print_receipt(sale, self) # Pass 'self' as parent widget
+
                 self.cart_items = []
                 self.tender_input.clear()
                 self.update_cart_display()
