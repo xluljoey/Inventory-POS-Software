@@ -4,8 +4,8 @@ from PySide6.QtCore import Qt, Signal, QSize, QPropertyAnimation, QEasingCurve, 
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QFont, QColor
 import os
 from core import config
-from core.config import ICON_DIR
 from loguru import logger
+from config.app_config import AppConfig # Added import
 
 class SyncStatusWidget(QWidget):
     def __init__(self, parent=None):
@@ -60,15 +60,17 @@ class NavButton(QPushButton):
         self.update_style()
 
     def _load_icon(self):
-        """Loads PNG icon from assets directory"""
-        icon_path = os.path.join(ICON_DIR, f"{self.icon_name}.png")
+        """Loads PNG icon from assets directory using the resource path helper."""
+        from utils.resource_path import get_resource_path
+        # Construct the relative path for the helper function
+        relative_icon_path = os.path.join("assets", "icons", f"{self.icon_name}.png")
+        icon_path = get_resource_path(relative_icon_path)
         
         if os.path.exists(icon_path):
             self.setIcon(QIcon(icon_path))
             self.setIconSize(QSize(22, 22))
         else:
-            logger.warning(f"Icon not found: {icon_path}")
-            # Fallback or leave without icon
+            logger.warning(f"Icon not found at resolved path: {icon_path}")
 
     def set_active(self, active):
         self.is_active = active
@@ -173,5 +175,26 @@ class MainNavigationBar(QFrame):
             btn.set_active(btn.btn_id == btn_id)
             
     def set_role(self, role):
-        """RBAC: Handled by showing/hiding screens, but keeping method for compatibility"""
-        pass
+        """
+        Configures navigation button visibility based on user role and app settings.
+        This ensures Role-Based Access Control (RBAC) is applied to the UI.
+        """
+        # Load settings dynamically from AppConfig (which reads from config.json or database)
+        show_reports_to_sales_rep = AppConfig.get_setting("show_reports_to_sales_rep", "0") == "1"
+        show_inventory_to_sales_rep = AppConfig.get_setting("show_inventory_to_sales_rep", "0") == "1"
+        show_customers_to_sales_rep = AppConfig.get_setting("show_customers_to_sales_rep", "0") == "1"
+
+        for btn in self.buttons:
+            if role == "sales_rep":
+                if btn.btn_id == 4: # Reports tab
+                    btn.setVisible(show_reports_to_sales_rep)
+                elif btn.btn_id == 1: # Inventory tab
+                    btn.setVisible(show_inventory_to_sales_rep)
+                elif btn.btn_id == 3: # Customers tab
+                    btn.setVisible(show_customers_to_sales_rep)
+                else:
+                    btn.setVisible(True) # Other buttons (Dashboard, Sales) are always visible for sales_rep
+            else: # Admin role - all buttons are visible
+                btn.setVisible(True)
+
+        logger.info(f"Navigation buttons configured for role: {role}. Reports visible: {show_reports_to_sales_rep}, Inventory visible: {show_inventory_to_sales_rep}, Customers visible: {show_customers_to_sales_rep}")

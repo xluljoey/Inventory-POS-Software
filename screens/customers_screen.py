@@ -13,7 +13,7 @@ from services.sales_service import SalesService
 from ui.dialogs import AddCustomerDialog, EditCustomerDialog, PayDebtDialog
 from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog
 from datetime import datetime
-
+from config.app_config import AppConfig # Added
 
 class CustomersScreen(QWidget):
     """Customer management screen with dashboard layout"""
@@ -25,6 +25,9 @@ class CustomersScreen(QWidget):
         self.init_ui()
         self.load_customer_data()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         """Initialize the customer screen UI without sidebar"""
         # Set main background color
@@ -208,7 +211,7 @@ class CustomersScreen(QWidget):
         self.customers_table.setColumnCount(5)
         # UPDATED COLUMNS: ID, Customer Name, Phone, Debt(GHS), Actions
         self.customers_table.setHorizontalHeaderLabels([
-            "ID", "Customer Name", "Phone", "Debt (GHS)", "Actions"
+            "ID", "Customer Name", "Phone", f"Debt ({self.get_currency_symbol()})", "Actions"
         ])
         
         # Configure table appearance
@@ -329,13 +332,13 @@ class CustomersScreen(QWidget):
                 display_text = f"""<div style='text-align: left; line-height: 1.2;'>
                                      <span style='font-size: 20px; font-weight: bold; color: white;'>{name}</span><br>
                                      <span style='font-size: 15px; font-weight: normal; color: rgba(255,255,255,0.9);'>
-                                         GH₵ {revenue:,.2f} • {count} sales
+                                         {self.get_currency_symbol()} {revenue:,.2f} • {count} sales
                                      </span>
                                  </div>"""
                 
                 self.top_customer_card.value_label.setText(display_text)
                 self.top_customer_card.value_label.setStyleSheet("font-size: 14px; color: inherit;") # Let HTML handle styling
-                self.top_customer_card.setToolTip(f"Customer: {name}\nTotal Revenue: GH₵ {revenue:,.2f}\nTotal Transactions: {count}")
+                self.top_customer_card.setToolTip(f"Customer: {name}\nTotal Revenue: {self.get_currency_symbol()} {revenue:,.2f}\nTotal Transactions: {count}")
             else:
                 self.top_customer_card.value_label.setText("N/A")
                 self.top_customer_card.value_label.setStyleSheet("font-size: 28px; font-weight: bold; color: white;") # Reset to default if N/A
@@ -363,9 +366,9 @@ class CustomersScreen(QWidget):
             phone_item = QTableWidgetItem(customer.get("phone", "N/A"))
             self.customers_table.setItem(row, 2, phone_item)
             
-            # Debt (GHS) - from outstanding_balance
+            # Debt (dynamic currency) - from outstanding_balance
             debt = customer.get("outstanding_balance", 0.0)
-            debt_item = QTableWidgetItem(f"{debt:,.2f}")
+            debt_item = QTableWidgetItem(f"{self.get_currency_symbol()} {debt:,.2f}") # Replaced GH₵
             debt_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             if debt > 0:
                 debt_item.setForeground(QColor("#E74C3C")) # Red if they have debt
@@ -480,16 +483,18 @@ class CustomersScreen(QWidget):
         customer_id = self.customers_table.item(row, 0).data(Qt.UserRole)
         customer_data = next((c for c in self.all_customers if c["id"] == customer_id), None)
 
-        if customer_data:
-            dialog = EditCustomerDialog(self, customer_data)
-            if dialog.exec() == QDialog.Accepted:
-                updated_data = dialog.get_customer_data()
-                updated_data['id'] = customer_data['id']
-                if CustomerService.update_customer(updated_data):
-                    self.load_customer_data()
-                    CustomInfoDialog("Success", "Customer updated successfully!", self).exec()
-                else:
-                    CustomErrorDialog("Error", "Failed to update customer", self).exec()
+        if not customer_data:
+            return
+
+        dialog = EditCustomerDialog(self, customer_data)
+        if dialog.exec() == QDialog.Accepted:
+            updated_data = dialog.get_customer_data()
+            updated_data['id'] = customer_data['id']
+            if CustomerService.update_customer(updated_data):
+                self.load_customer_data()
+                CustomInfoDialog("Success", "Customer updated successfully!", self).exec()
+            else: # <--- This 'else' should be correctly aligned with its 'if'
+                CustomErrorDialog("Error", "Failed to update customer", self).exec()
     
     def delete_customer(self, row):
         if self.current_user and self.current_user.role != "admin":
@@ -520,6 +525,9 @@ class CustomerHistoryDialog(QDialog):
         self.init_ui()
         self.load_data()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -538,7 +546,7 @@ class CustomerHistoryDialog(QDialog):
         # Balance Label
         balance = self.customer.get('outstanding_balance', 0.0)
         balance_color = "#E74C3C" if balance > 0 else "#27AE60"
-        balance_lbl = QLabel(f"Balance: GH₵ {balance:,.2f}")
+        balance_lbl = QLabel(f"Balance: {self.get_currency_symbol()} {balance:,.2f}") # Replaced GH₵
         balance_lbl.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {balance_color}; margin-left: 15px;")
         
         header_layout.addWidget(name_lbl)
@@ -631,7 +639,7 @@ class CustomerHistoryDialog(QDialog):
                 }
                 
                 if CustomerService.add_customer_payment(payment_data):
-                    CustomInfoDialog("Success", f"Payment of GH₵ {amount:,.2f} recorded!", self).exec()
+                    CustomInfoDialog("Success", f"Payment of {self.get_currency_symbol()} {amount:,.2f} recorded!", self).exec() # Replaced GH₵
                     # Refresh data
                     self.load_data()
                     # Also notify parent to refresh main table
@@ -689,7 +697,7 @@ class CustomerHistoryDialog(QDialog):
         l = QVBoxLayout(tab)
         
         # Card
-        self.total_payments_card = self.create_card("Total Payments", "GH₵ 0.00", "#1976d2") # Blue
+        self.total_payments_card = self.create_card("Total Payments", f"{self.get_currency_symbol()} 0.00", "#1976d2") # Blue
         l.addWidget(self.total_payments_card)
         
         # Table
@@ -788,7 +796,7 @@ class CustomerHistoryDialog(QDialog):
 
             # --- PAYMENT TAB ---
             total_paid = sum([p['amount'] for p in payments])
-            self.lbl_map["Total Payments"].setText(f"GH₵ {total_paid:,.2f}")
+            self.lbl_map["Total Payments"].setText(f"{self.get_currency_symbol()} {total_paid:,.2f}") # Replaced GH₵
             self.payment_table.setRowCount(len(payments))
             
             for r, p in enumerate(payments):
@@ -799,10 +807,10 @@ class CustomerHistoryDialog(QDialog):
                 prev_bal, new_bal = payment_snapshots.get(p['id'], (0.0, 0.0))
                 
                 self.payment_table.setItem(r, 0, QTableWidgetItem(date))
-                self.payment_table.setItem(r, 1, QTableWidgetItem(f"{amt:.2f}"))
-                self.payment_table.setItem(r, 2, QTableWidgetItem(f"{prev_bal:.2f}"))
-                self.payment_table.setItem(r, 3, QTableWidgetItem(f"{new_bal:.2f}"))
-                self.payment_table.setItem(r, 4, QTableWidgetItem(f"{amt:.2f}"))
+                self.payment_table.setItem(r, 1, QTableWidgetItem(f"{self.get_currency_symbol()}{amt:.2f}")) # Replaced GH₵
+                self.payment_table.setItem(r, 2, QTableWidgetItem(f"{self.get_currency_symbol()}{prev_bal:.2f}")) # Replaced GH₵
+                self.payment_table.setItem(r, 3, QTableWidgetItem(f"{self.get_currency_symbol()}{new_bal:.2f}")) # Replaced GH₵
+                self.payment_table.setItem(r, 4, QTableWidgetItem(f"{self.get_currency_symbol()}{amt:.2f}")) # Replaced GH₵
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load customer history: {str(e)}")

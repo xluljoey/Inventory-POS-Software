@@ -325,13 +325,13 @@ class ReportsScreen(QWidget):
         card_grid_layout.setSpacing(15) # Spacing between cards
         card_grid_container.setFixedHeight(90) # Fixed height for card container
         
-        self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
+        self.total_sales_card = self.create_summary_card("Total Sales", f"{self.get_currency_symbol()}0.00", "#4caf50")
         card_grid_layout.addWidget(self.total_sales_card, 0, 0)
         
         self.total_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
         card_grid_layout.addWidget(self.total_transactions_card, 0, 1)
         
-        self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
+        self.avg_transaction_card = self.create_summary_card("Avg. Transaction", f"{self.get_currency_symbol()}0.00", "#ff9800")
         card_grid_layout.addWidget(self.avg_transaction_card, 0, 2)
         
         self.top_product_card = self.create_summary_card("Top Product", "N/A", "#9c27b0")
@@ -375,7 +375,7 @@ class ReportsScreen(QWidget):
         self.out_of_stock_card = self.create_summary_card("Out of Stock", "0", "#f44336")
         card_grid_layout.addWidget(self.out_of_stock_card, 0, 2)
         
-        self.total_value_card = self.create_summary_card("Total Value", "GH₵0.00", "#4caf50")
+        self.total_value_card = self.create_summary_card("Total Value", f"{self.get_currency_symbol()}0.00", "#4caf50")
         card_grid_layout.addWidget(self.total_value_card, 0, 3)
         
         card_grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed), 0, 4)
@@ -444,13 +444,13 @@ class ReportsScreen(QWidget):
         card_grid_layout.setSpacing(15) # Spacing between cards
         card_grid_container.setFixedHeight(90) # Fixed height for card container
         
-        self.total_revenue_card = self.create_summary_card("Total Revenue", "GH₵0.00", "#4caf50")
+        self.total_revenue_card = self.create_summary_card("Total Revenue", f"{self.get_currency_symbol()}0.00", "#4caf50")
         card_grid_layout.addWidget(self.total_revenue_card, 0, 0)
         
-        self.total_costs_card = self.create_summary_card("Total Costs", "GH₵0.00", "#f44336")
+        self.total_costs_card = self.create_summary_card("Total Costs", f"{self.get_currency_symbol()}0.00", "#f44336")
         card_grid_layout.addWidget(self.total_costs_card, 0, 1)
         
-        self.total_profit_card = self.create_summary_card("Total Profit", "GH₵0.00", "#9c27b0")
+        self.total_profit_card = self.create_summary_card("Total Profit", f"{self.get_currency_symbol()}0.00", "#9c27b0")
         card_grid_layout.addWidget(self.total_profit_card, 0, 2)
         
         self.profit_margin_card = self.create_summary_card("Profit Margin", "0%", "#ff9800")
@@ -483,13 +483,13 @@ class ReportsScreen(QWidget):
         card_grid_layout.setSpacing(15) # Spacing between cards
         card_grid_container.setFixedHeight(90) # Fixed height for card container
         
-        self.daily_total_sales_card = self.create_summary_card("Today's Revenue", "GH₵0.00", "#4caf50")
+        self.daily_total_sales_card = self.create_summary_card("Today's Revenue", f"{self.get_currency_symbol()}0.00", "#4caf50")
         card_grid_layout.addWidget(self.daily_total_sales_card, 0, 0)
         
         self.daily_transactions_card = self.create_summary_card("Transactions", "0", "#1976d2")
         card_grid_layout.addWidget(self.daily_transactions_card, 0, 1)
         
-        self.daily_avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
+        self.daily_avg_transaction_card = self.create_summary_card("Avg. Transaction", f"{self.get_currency_symbol()}0.00", "#ff9800")
         card_grid_layout.addWidget(self.daily_avg_transaction_card, 0, 2)
         
         self.daily_customers_card = self.create_summary_card("Customers", "0", "#9c27b0")
@@ -576,7 +576,7 @@ class ReportsScreen(QWidget):
         self.load_report_data()
     
     def get_currency_symbol(self):
-        return AppConfig.CURRENCY_SYMBOL
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
     
     def load_sales_data(self, start_date, end_date):
         try:
@@ -679,9 +679,9 @@ class ReportsScreen(QWidget):
                 self.inventory_table.setItem(i, 1, QTableWidgetItem(p['sku']))
                 self.inventory_table.setItem(i, 2, QTableWidgetItem(p['category'] or "N/A"))
                 self.inventory_table.setItem(i, 3, QTableWidgetItem(str(p['quantity'])))
-                self.inventory_table.setItem(i, 4, QTableWidgetItem(f"GH₵{p['cost_price']:.2f}"))
-                self.inventory_table.setItem(i, 5, QTableWidgetItem(f"GH₵{p['selling_price']:.2f}"))
-                self.inventory_table.setItem(i, 6, QTableWidgetItem(f"GH₵{p['total_value']:.2f}"))
+                self.inventory_table.setItem(i, 4, QTableWidgetItem(f"{self.get_currency_symbol()}{p['cost_price']:.2f}"))
+                self.inventory_table.setItem(i, 5, QTableWidgetItem(f"{self.get_currency_symbol()}{p['selling_price']:.2f}"))
+                self.inventory_table.setItem(i, 6, QTableWidgetItem(f"{self.get_currency_symbol()}{p['total_value']:.2f}"))
                 status = "In Stock"
                 status_color = Qt.green
                 if p['quantity'] <= 0: 
@@ -787,9 +787,9 @@ class ReportsScreen(QWidget):
             
             self.financial_table.setRowCount(1)
             self.financial_table.setItem(0, 0, QTableWidgetItem(f"{start.date()} to {end.date()}"))
-            self.financial_table.setItem(0, 1, QTableWidgetItem(f"GH₵{rev:.2f}"))
-            self.financial_table.setItem(0, 2, QTableWidgetItem(f"GH₵{cost:.2f}"))
-            self.financial_table.setItem(0, 3, QTableWidgetItem(f"GH₵{profit:.2f}"))
+            self.financial_table.setItem(0, 1, QTableWidgetItem(f"{self.get_currency_symbol()}{rev:.2f}"))
+            self.financial_table.setItem(0, 2, QTableWidgetItem(f"{self.get_currency_symbol()}{cost:.2f}"))
+            self.financial_table.setItem(0, 3, QTableWidgetItem(f"{self.get_currency_symbol()}{profit:.2f}"))
             self.financial_table.setItem(0, 4, QTableWidgetItem(f"{margin:.2f}%"))
         except Exception as e:
             print(f"Financial load error: {e}")
@@ -1028,7 +1028,9 @@ class ReportsScreen(QWidget):
             pdf.set_font("Arial", '', 8)
             for row in data:
                 for item in row:
-                    pdf.cell(col_width, 7, str(item).replace("₵", "GHS")[:25], border=1)
+                    # Fix character encoding error for Cedi symbol
+                    clean_item = str(item).replace("₵", "GHS")
+                    pdf.cell(col_width, 7, clean_item[:25], border=1)
                 pdf.ln()
                 
             pdf.output(temp_pdf)

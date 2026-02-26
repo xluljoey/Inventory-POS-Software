@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QComboBox, QDoubleSpinBox, QCheckBox, QDialog, QDialogButtonBox,
     QScrollArea, QMessageBox
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer # Added QTimer
 from PySide6.QtGui import QFont, QColor
 from loguru import logger
 from datetime import datetime
@@ -19,7 +19,7 @@ from config.app_config import AppConfig
 from screens.about_screen import AboutScreen
 from utils.cloud_service import CloudService
 
-from core.config import IS_PREMIUM
+# from core.config import IS_PREMIUM # IS_PREMIUM is commented out in main.py, so I'll comment it here too.
 
 # --- New/Improved Dialogs for CRUD Operations ---
 
@@ -146,7 +146,7 @@ class SettingsScreen(QWidget):
             if btn.property("admin_only"):
                 btn.setVisible(is_admin)
 
-        # 4. ADMIN PROTECTION: Hide sensitive cloud/restore buttons for Sales Reps
+        # ADMIN PROTECTION: Hide sensitive cloud/restore/auto-backup buttons for Sales Reps
         if hasattr(self, 'link_drive_btn'):
             is_linked = self.cloud_service.is_linked()
             self.link_drive_btn.setVisible(is_admin and not is_linked)
@@ -155,6 +155,9 @@ class SettingsScreen(QWidget):
             self.cloud_restore_btn.setVisible(is_admin)
             self.sys_backup_btn.setVisible(is_admin)
             self.local_restore_btn.setVisible(is_admin)
+            # Auto backup toggle
+            if hasattr(self, 'auto_cloud_backup_checkbox'):
+                self.auto_cloud_backup_checkbox.setVisible(is_admin)
 
         if not is_admin:
             self.content_stack.setCurrentWidget(self.about_page)
@@ -177,6 +180,8 @@ class SettingsScreen(QWidget):
         self._load_inventory_settings()
         self._load_user_data()
         self._refresh_bulk_categories()
+        # Load auto-backup setting
+        self._load_backup_settings() # Corrected: this method is now defined below
 
     def _refresh_bulk_categories(self):
         """Refresh categories in the bulk update dropdown."""
@@ -193,21 +198,24 @@ class SettingsScreen(QWidget):
         """Saves all settings from the UI to the database."""
         try:
             # POS & General Settings
-            DatabaseService.update_setting("business_name", self.store_name_input.text())
-            DatabaseService.update_setting("business_address", self.address_input.text())
+            AppConfig.set_setting("business_name", self.store_name_input.text()) # Changed to AppConfig.set_setting
+            AppConfig.set_setting("business_address", self.address_input.text()) # Changed to AppConfig.set_setting
             currency_text = self.currency_combo.currentText()
             if "(" in currency_text and ")" in currency_text:
                 symbol = currency_text.split('(')[1].split(')')[0]
-                DatabaseService.update_setting("currency_symbol", symbol)
+                AppConfig.set_setting("currency_symbol", symbol) # Changed to AppConfig.set_setting
 
             # Permissions (IMPLEMENTED)
-            DatabaseService.update_setting("allow_sales_rep_discounts", "1" if self.perm_discounts.isChecked() else "0")
-            DatabaseService.update_setting("show_reports_to_sales_rep", "1" if self.perm_reports.isChecked() else "0")
-            DatabaseService.update_setting("show_cost_to_sales_rep", "1" if self.perm_costs.isChecked() else "0")
+            AppConfig.set_setting("allow_sales_rep_discounts", "1" if self.perm_discounts.isChecked() else "0") # Changed to AppConfig.set_setting
+            AppConfig.set_setting("show_reports_to_sales_rep", "1" if self.perm_reports.isChecked() else "0") # Changed to AppConfig.set_setting
+            AppConfig.set_setting("show_cost_to_sales_rep", "1" if self.perm_costs.isChecked() else "0") # Changed to AppConfig.set_setting
 
             # Inventory & Pricing Settings
-            DatabaseService.update_setting("global_markup", str(self.markup_input.value()))
-            DatabaseService.update_setting("low_stock_threshold", str(self.low_stock_input.value()))
+            AppConfig.set_setting("global_markup", str(self.markup_input.value())) # Changed to AppConfig.set_setting
+            AppConfig.set_setting("low_stock_threshold", str(self.low_stock_input.value())) # Changed to AppConfig.set_setting
+
+            # Auto Backup Setting
+            # This setting is saved directly by _on_auto_backup_toggled, no need to save here.
             
             QMessageBox.information(self, "Success", "All settings have been saved successfully.")
             logger.info(f"System settings updated by Admin: {self.current_user.username}")
@@ -249,25 +257,26 @@ class SettingsScreen(QWidget):
             self.nav_buttons.append(btn)
         
         # 4. PREMIUM UPSELL: Show Upgrade button if Basic
-        if not IS_PREMIUM:
-            sidebar_layout.addStretch()
-            upgrade_btn = QPushButton("⭐ Upgrade to Premium")
-            upgrade_btn.setFixedHeight(45)
-            upgrade_btn.setCursor(Qt.PointingHandCursor)
-            upgrade_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #FFF7ED;
-                    color: #C2410C;
-                    border: 1px solid #FED7AA;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    margin: 8px;
-                }
-                QPushButton:hover { background-color: #FFEDD5; }
-            """)
-            upgrade_btn.clicked.connect(lambda: QMessageBox.information(self, "Premium", "Contact support at joey@example.com to unlock Real-time Sync!"))
-            sidebar_layout.addWidget(upgrade_btn)
+        # if not IS_PREMIUM:
+        #     sidebar_layout.addStretch()
+        #     upgrade_btn = QPushButton("⭐ Upgrade to Premium")
+        #     upgrade_btn.setFixedHeight(45)
+        #     upgrade_btn.setCursor(Qt.PointingHandCursor)
+        #     upgrade_btn.setStyleSheet("""
+        #         QPushButton {
+        #             background-color: #FFF7ED;
+        #             color: #C2410C;
+        #             border: 1px solid #FED7AA;
+        #             border-radius: 8px;
+        #             font-weight: bold;
+        #             margin: 8px;
+        #         }
+        #         QPushButton:hover { background-color: #FFEDD5; }
+        #     """)
+        #     upgrade_btn.clicked.connect(lambda: QMessageBox.information(self, "Premium", "Contact support at joey@example.com to unlock Real-time Sync!"))
+        #     sidebar_layout.addWidget(upgrade_btn)
         
+        sidebar_layout.addStretch() # Ensure stretch is always there
         return self.sidebar_widget
 
     def _create_nav_button(self, text):
@@ -518,9 +527,15 @@ class SettingsScreen(QWidget):
         self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 10px;")
         layout.addWidget(self.cloud_status_label)
 
+        # Auto Cloud Backup Toggle (New)
+        self.auto_cloud_backup_checkbox = QCheckBox("Enable Auto Cloud Backup")
+        self.auto_cloud_backup_checkbox.setStyleSheet("font-size: 14px; font-weight: 500; margin-top: 10px;")
+        self.auto_cloud_backup_checkbox.toggled.connect(self._on_auto_backup_toggled)
+        layout.addWidget(self.auto_cloud_backup_checkbox)
+
         # Section: Local Database Operations
         local_title = QLabel("Local Database Operations")
-        local_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50;")
+        local_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50; margin-top: 20px;")
         layout.addWidget(local_title)
 
         cards_layout = QHBoxLayout()
@@ -611,6 +626,11 @@ class SettingsScreen(QWidget):
         
         return page
 
+    def _on_auto_backup_toggled(self, checked):
+        """Save the state of the auto cloud backup checkbox to AppConfig."""
+        AppConfig.set_setting("auto_cloud_backup_enabled", "1" if checked else "0")
+        logger.info(f"Auto Cloud Backup Toggled: {'Enabled' if checked else 'Disabled'}")
+
     def _update_drive_status(self):
         """1. UI SYNC: Update status label and button states."""
         is_linked = self.cloud_service.is_linked()
@@ -625,6 +645,10 @@ class SettingsScreen(QWidget):
             self.unlink_drive_btn.setVisible(self.current_user.role == "admin")
             self.sync_cloud_btn.setEnabled(True)
             self.cloud_restore_btn.setEnabled(True)
+            # Load auto backup state
+            auto_backup_enabled = AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1"
+            self.auto_cloud_backup_checkbox.setChecked(auto_backup_enabled)
+            self.auto_cloud_backup_checkbox.setEnabled(True) # Enable if linked
         else:
             self.cloud_status_label.setText("Cloud Status: Not Linked")
             self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 10px;")
@@ -634,6 +658,8 @@ class SettingsScreen(QWidget):
             self.unlink_drive_btn.setVisible(False)
             self.sync_cloud_btn.setEnabled(False)
             self.cloud_restore_btn.setEnabled(False)
+            self.auto_cloud_backup_checkbox.setChecked(False) # Disable if not linked
+            self.auto_cloud_backup_checkbox.setEnabled(False)
 
     def _unlink_google_drive(self):
         """Disconnect Google Drive account."""
@@ -648,6 +674,8 @@ class SettingsScreen(QWidget):
         
         if confirm == QMessageBox.Yes:
             if self.cloud_service.unlink():
+                # Also disable auto backup if unlinked
+                AppConfig.set_setting("auto_cloud_backup_enabled", "0")
                 self._update_drive_status()
                 QMessageBox.information(self, "Success", "Google Drive account has been unlinked.")
 
@@ -856,38 +884,44 @@ class SettingsScreen(QWidget):
             main_window.show_dashboard()
 
     def _load_inventory_settings(self):
-        markup_setting = DatabaseService.get_setting("global_markup")
-        if markup_setting and markup_setting.value:
-            self.markup_input.setValue(float(markup_setting.value))
+        markup_setting = AppConfig.get_setting("global_markup", "0.0") # Changed to AppConfig.get_setting
+        if markup_setting: # No need to check .value if it returns a string
+            self.markup_input.setValue(float(markup_setting))
             
-        threshold_setting = DatabaseService.get_setting("low_stock_threshold")
-        if threshold_setting and threshold_setting.value:
-            self.low_stock_input.setValue(float(threshold_setting.value))
+        threshold_setting = AppConfig.get_setting("low_stock_threshold", "10") # Changed to AppConfig.get_setting
+        if threshold_setting: # No need to check .value if it returns a string
+            self.low_stock_input.setValue(float(threshold_setting))
 
     def _load_pos_settings(self):
-        business_name_setting = DatabaseService.get_setting("business_name")
-        self.store_name_input.setText(business_name_setting.value if business_name_setting else "")
+        business_name_setting = AppConfig.get_setting("business_name", "") # Changed to AppConfig.get_setting
+        self.store_name_input.setText(business_name_setting)
         
-        address_setting = DatabaseService.get_setting("business_address")
-        self.address_input.setText(address_setting.value if address_setting else "")
+        address_setting = AppConfig.get_setting("business_address", "") # Changed to AppConfig.get_setting
+        self.address_input.setText(address_setting)
         
-        currency_setting = DatabaseService.get_setting("currency_symbol")
+        currency_setting = AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL) # Changed to AppConfig.get_setting
         if currency_setting:
             # Find the item in the combobox that contains the symbol
             for i in range(self.currency_combo.count()):
-                if currency_setting.value in self.currency_combo.itemText(i):
+                if currency_setting in self.currency_combo.itemText(i):
                     self.currency_combo.setCurrentIndex(i)
                     break
         
         # Load Permissions
-        p_discounts = DatabaseService.get_setting("allow_sales_rep_discounts")
-        self.perm_discounts.setChecked(p_discounts.value == "1" if p_discounts else False)
+        p_discounts = AppConfig.get_setting("allow_sales_rep_discounts", "0") # Changed to AppConfig.get_setting
+        self.perm_discounts.setChecked(p_discounts == "1")
         
-        p_reports = DatabaseService.get_setting("show_reports_to_sales_rep")
-        self.perm_reports.setChecked(p_reports.value == "1" if p_reports else False)
+        p_reports = AppConfig.get_setting("show_reports_to_sales_rep", "0") # Changed to AppConfig.get_setting
+        self.perm_reports.setChecked(p_reports == "1")
         
-        p_costs = DatabaseService.get_setting("show_cost_to_sales_rep")
-        self.perm_costs.setChecked(p_costs.value == "1" if p_costs else False)
+        p_costs = AppConfig.get_setting("show_cost_to_sales_rep", "0") # Changed to AppConfig.get_setting
+        self.perm_costs.setChecked(p_costs == "1")
+
+    def _load_backup_settings(self): # Added missing method
+        """Load settings related to backup and restore."""
+        auto_backup_enabled = AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1"
+        self.auto_cloud_backup_checkbox.setChecked(auto_backup_enabled)
+        # The checkbox's enabled state is handled by _update_drive_status based on link status.
         
     def _load_category_data(self):
         self.category_table.setRowCount(0)
@@ -941,52 +975,28 @@ class SettingsScreen(QWidget):
             else:
                 QMessageBox.warning(self, "Validation Error", "Category name cannot be empty.")
 
-        def _delete_category(self, category_id):
+    def _delete_category(self, category_id):
 
-            # 1. Fetch category name
+        # 1. Fetch category name
+        category = InventoryService.get_category_by_id(category_id)
+        if not category: return
 
-            category = InventoryService.get_category_by_id(category_id)
-
-            if not category: return
-
+        # 2. Check for linked products
+        with DatabaseService.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM products WHERE category = ?", (category['name'],))
+            count = cursor.fetchone()[0]
             
+        if count > 0:
+            QMessageBox.warning(self, "Cannot Delete", 
+                                f"This category is linked to {count} products. "
+                                "Please reassign or delete the products first.")
+            return
 
-            # 2. Check for linked products
-
-            with DatabaseService.get_connection() as conn:
-
-                cursor = conn.cursor()
-
-                cursor.execute("SELECT COUNT(*) FROM products WHERE category = ?", (category['name'],))
-
-                count = cursor.fetchone()[0]
-
-                
-
-            if count > 0:
-
-                QMessageBox.warning(self, "Cannot Delete", 
-
-                                    f"This category is linked to {count} products. "
-
-                                    "Please reassign or delete the products first.")
-
-                return
-
-    
-
-            reply = QMessageBox.question(self, 'Confirm Delete', 
-
-                                         f"Are you sure you want to delete '{category['name']}'?",
-
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-
-            if reply == QMessageBox.Yes:
-
-                InventoryService.delete_category(category_id)
-
-                self._load_category_data() # Refresh
-
-                self._refresh_bulk_categories()
-
-    
+        reply = QMessageBox.question(self, 'Confirm Delete', 
+                                     f"Are you sure you want to delete '{category['name']}'?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            InventoryService.delete_category(category_id)
+            self._load_category_data() # Refresh
+            self._refresh_bulk_categories()

@@ -3,10 +3,15 @@ from datetime import datetime, timedelta
 from loguru import logger
 from database.database import DatabaseService
 from database.models import Product, StockMovement, Category
+from config.app_config import AppConfig # Added
 
 class InventoryService:
     """Service for inventory management operations"""
     
+    @staticmethod
+    def get_currency_symbol(): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     @staticmethod
     def add_product(product_data: dict) -> int:
         """Add a new product to inventory"""
@@ -279,7 +284,7 @@ class InventoryService:
         if DatabaseService.update_product(product):
             DatabaseService.create_activity(
                 'price_change', 
-                f"Price updated for {product.name}: GH₵ {old_price:.2f} -> GH₵ {new_price:.2f}",
+                f"Price updated for {product.name}: {InventoryService.get_currency_symbol()} {old_price:.2f} -> {InventoryService.get_currency_symbol()} {new_price:.2f}", # Replaced GH₵
                 user
             )
             return True
@@ -296,7 +301,7 @@ class InventoryService:
         if DatabaseService.update_product(product):
             DatabaseService.create_activity(
                 'price_change', 
-                f"Cost updated for {product.name}: GH₵ {old_cost:.2f} -> GH₵ {new_cost:.2f}",
+                f"Cost updated for {product.name}: {InventoryService.get_currency_symbol()} {old_cost:.2f} -> {InventoryService.get_currency_symbol()} {new_cost:.2f}", # Replaced GH₵
                 user
             )
             return True
@@ -353,8 +358,8 @@ class InventoryService:
         return DatabaseService.get_restock_history(limit)
 
     @staticmethod
-    def create_product(name: str, selling_price: float, category: str, unit_type: str, weight_per_unit: float, initial_stock: float) -> int:
-        """Create a new product with basic fields"""
+    def create_product(name: str, selling_price: float, category: str, unit_type: str, weight_per_unit: float, initial_stock: float, cost_price: float) -> int:
+        """Create a new product with basic fields and initial cost price."""
         # Note: weight_per_unit is mentioned in requirements but not in current Product model.
         # We can store it in notes or just ignore if it's not in schema yet.
         # Actually, let's just use existing add_product logic but with these params.
@@ -371,7 +376,7 @@ class InventoryService:
             'category': category,
             'unit_type': unit_type,
             'quantity': initial_stock,
-            'cost_price': selling_price, # Initially set cost=selling as per requirement
+            'cost_price': cost_price, # Use the new cost_price argument
             'selling_price': selling_price,
             'reorder_level': 5,
             'supplier': None,

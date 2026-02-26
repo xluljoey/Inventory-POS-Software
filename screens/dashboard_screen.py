@@ -9,6 +9,7 @@ from database.models import User
 from services.inventory_service import InventoryService
 from datetime import datetime, timedelta
 from ui.product_list_dialog import ProductListDialog
+from config.app_config import AppConfig # Added
 
 class ClickableCard(QFrame):
     clicked = Signal()
@@ -37,6 +38,9 @@ class DashboardScreen(QWidget):
         self.timer.timeout.connect(self.update_dashboard)
         self.timer.start(30000)  # Update every 30 seconds
     
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         """Initialize the dashboard UI"""
         # Main layout with proper spacing as per design spec
@@ -81,9 +85,9 @@ class DashboardScreen(QWidget):
         self.standard_inventory_card = self.create_kpi_card("Expired Products", "0", "#2C3E50", self.show_expired_products_dialog)
         
         # Sales & Customer Overview Cards (Visible to all)
-        self.total_sales_card = self.create_kpi_card("Today's Revenue", "GH₵0", "#192A56", self.go_to_daily_sales)
+        self.total_sales_card = self.create_kpi_card("Today's Revenue", f"{self.get_currency_symbol()}0", "#192A56", self.go_to_daily_sales) # Replaced GH₵
         self.total_orders_card = self.create_kpi_card("Total Orders", "0", "#192A56")
-        self.avg_sales_card = self.create_kpi_card("Average Sales", "GH₵0", "#4A76D9")
+        self.avg_sales_card = self.create_kpi_card("Average Sales", f"{self.get_currency_symbol()}0", "#4A76D9") # Replaced GH₵
         self.total_customers_card = self.create_kpi_card("Total Customers", "0", "#00BCD4", self.go_to_customers)
         
         # Add cards to grid
@@ -459,9 +463,9 @@ class DashboardScreen(QWidget):
             total_customers = len(all_customers) if all_customers else 0
             
             # Update overview cards
-            self.total_sales_card.value_label.setText(f"GH₵{today_sales:,.2f}")
+            self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}{today_sales:,.2f}") # Replaced GH₵
             self.total_orders_card.value_label.setText(str(total_orders))
-            self.avg_sales_card.value_label.setText(f"GH₵{avg_sales:,.2f}")
+            self.avg_sales_card.value_label.setText(f"{self.get_currency_symbol()}{avg_sales:,.2f}") # Replaced GH₵
             self.total_customers_card.value_label.setText(str(total_customers))
             
             # --- UPDATE RECENT ACTIVITY (Combined Sales and System Activities) ---
@@ -484,7 +488,7 @@ class DashboardScreen(QWidget):
                 customer_name = sale.get('customer_name', 'Walk-in')
                 combined_activities.append({
                     'date': sale['date'],
-                    'description': f"New Sale to {customer_name}: GH₵ {sale['total_amount']:.2f}",
+                    'description': f"New Sale to {customer_name}: {self.get_currency_symbol()} {sale['total_amount']:.2f}", # Replaced GH₵
                     'user': sale['cashier_user'],
                     'type': 'sale'
                 })
@@ -543,9 +547,9 @@ class DashboardScreen(QWidget):
                 self.below_minimum_card.value_label.setText("0")
                 self.low_stock_card.value_label.setText("0")
                 self.standard_inventory_card.value_label.setText("0")
-                self.total_sales_card.value_label.setText("GH₵0.00")
+                self.total_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00") # Replaced GH₵
                 self.total_orders_card.value_label.setText("0")
-                self.avg_sales_card.value_label.setText("GH₵0.00")
+                self.avg_sales_card.value_label.setText(f"{self.get_currency_symbol()}0.00") # Replaced GH₵
                 self.total_customers_card.value_label.setText("0")
                 # Clear activity table
                 if hasattr(self, 'activity_table'):

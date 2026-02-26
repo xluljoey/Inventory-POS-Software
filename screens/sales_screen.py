@@ -12,7 +12,7 @@ from services.customer_service import CustomerService
 from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog
 from datetime import datetime
 from services.print_service import ReceiptPrinter
-
+from config.app_config import AppConfig # Added
 
 class SalesScreen(QWidget):
     """Simplified Sales/POS screen for processing transactions"""
@@ -27,6 +27,9 @@ class SalesScreen(QWidget):
         self.init_ui()
         self.load_product_data()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         """Initialize the simplified POS UI"""
         # Main layout
@@ -180,7 +183,7 @@ class SalesScreen(QWidget):
         totals_container.setStyleSheet("background-color: #F8F9FA; border-radius: 8px; padding: 10px;")
         totals_layout = QVBoxLayout(totals_container)
         
-        self.cart_total_label = QLabel("TOTAL: GH₵ 0.00")
+        self.cart_total_label = QLabel(f"TOTAL: {self.get_currency_symbol()} 0.00") # Replaced GH₵
         self.cart_total_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #1976D2;")
         self.cart_total_label.setAlignment(Qt.AlignCenter)
         totals_layout.addWidget(self.cart_total_label)
@@ -231,7 +234,7 @@ class SalesScreen(QWidget):
         right_layout.addWidget(self.customer_combo)
         
         self.tender_input = QLineEdit()
-        self.tender_input.setPlaceholderText("Amount Tendered (GH₵)")
+        self.tender_input.setPlaceholderText(f"Amount Tendered ({self.get_currency_symbol()})") # Replaced GH₵
         self.tender_input.setFixedHeight(45)
         self.tender_input.textChanged.connect(self.on_tender_amount_changed)
         # Watermark style for placeholder
@@ -255,7 +258,7 @@ class SalesScreen(QWidget):
         right_layout.addWidget(self.tender_input)
         
         # Change Due
-        self.change_label = QLabel("Change Due: GH₵ 0.00")
+        self.change_label = QLabel(f"Change Due: {self.get_currency_symbol()} 0.00") # Replaced GH₵
         self.change_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #27AE60;")
         right_layout.addWidget(self.change_label)
         
@@ -322,7 +325,7 @@ class SalesScreen(QWidget):
         for row, p in enumerate(products):
             self.product_table.setItem(row, 0, QTableWidgetItem(p["name"]))
             self.product_table.setItem(row, 1, QTableWidgetItem(p["sku"]))
-            self.product_table.setItem(row, 2, QTableWidgetItem(f"GH₵ {p['selling_price']:.2f}"))
+            self.product_table.setItem(row, 2, QTableWidgetItem(f"{self.get_currency_symbol()} {p['selling_price']:.2f}")) # Replaced GH₵
             stock_item = QTableWidgetItem(str(int(p["quantity"])))
             if p["is_low_stock"]: stock_item.setForeground(QColor("#E74C3C"))
             self.product_table.setItem(row, 3, stock_item)
@@ -434,7 +437,7 @@ class SalesScreen(QWidget):
             self.cart_table.setCellWidget(row, 1, qty_container)
             
             # --- SUBTOTAL ---
-            sub_item = QTableWidgetItem(f"GH₵ {sub:.2f}")
+            sub_item = QTableWidgetItem(f"{self.get_currency_symbol()} {sub:.2f}") # Replaced GH₵
             sub_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.cart_table.setItem(row, 2, sub_item)
 
@@ -454,7 +457,7 @@ class SalesScreen(QWidget):
             
             total += sub
         
-        self.cart_total_label.setText(f"TOTAL: GH₵ {total:,.2f}")
+        self.cart_total_label.setText(f"TOTAL: {self.get_currency_symbol()} {total:,.2f}") # Replaced GH₵
         self.complete_sale_btn.setEnabled(total > 0)
         self.update_change_display()
 
@@ -478,11 +481,11 @@ class SalesScreen(QWidget):
 
     def update_change_display(self):
         try:
-            total_text = self.cart_total_label.text().split("GH₵")[1].strip().replace(",", "")
+            total_text = self.cart_total_label.text().split(self.get_currency_symbol())[1].strip().replace(",", "") # Replaced GH₵
             total = float(total_text)
             tender = float(self.tender_input.text() or "0")
             change = tender - total
-            self.change_label.setText(f"Change Due: GH₵ {max(0, change):.2f}")
+            self.change_label.setText(f"Change Due: {self.get_currency_symbol()} {max(0, change):.2f}") # Replaced GH₵
             self.change_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {'#27AE60' if change >= 0 else '#E74C3C'};")
         except: pass
 
@@ -492,7 +495,7 @@ class SalesScreen(QWidget):
             self.update_cart_display()
 
     def on_complete_sale_clicked(self):
-        total_text = self.cart_total_label.text().split("GH₵")[1].strip().replace(",", "")
+        total_text = self.cart_total_label.text().split(self.get_currency_symbol())[1].strip().replace(",", "") # Replaced GH₵
         total = float(total_text)
         
         # Validation: Restrict sales without payment unless a customer is selected
@@ -546,5 +549,4 @@ class SalesScreen(QWidget):
                 self.sale_completed.emit()
         except Exception as e:
             CustomErrorDialog("Transaction Error", f"Failed to complete sale: {str(e)}", self).exec()
-        
         

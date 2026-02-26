@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from services.inventory_service import InventoryService
 from ui.custom_dialog import CustomWarningDialog, CustomInfoDialog, CustomErrorDialog
+from config.app_config import AppConfig # Added import
 
 class ManageStockDialog(QDialog):
     def __init__(self, parent=None, user=None):
@@ -23,6 +24,9 @@ class ManageStockDialog(QDialog):
         self.init_ui()
         self.refresh_products_list()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -73,7 +77,7 @@ class ManageStockDialog(QDialog):
         # Update Price Section
         self.manage_price_input = QDoubleSpinBox()
         self.manage_price_input.setMaximum(999999.99)
-        self.manage_price_input.setPrefix("GH₵ ")
+        self.manage_price_input.setPrefix(f"{self.get_currency_symbol()} ") # Replaced GH₵
         self.manage_price_input.setFixedHeight(35)
         
         update_price_btn = QPushButton("Update Price")
@@ -102,7 +106,7 @@ class ManageStockDialog(QDialog):
         # Update Cost Section (Added)
         self.manage_cost_input = QDoubleSpinBox()
         self.manage_cost_input.setMaximum(999999.99)
-        self.manage_cost_input.setPrefix("GH₵ ")
+        self.manage_cost_input.setPrefix(f"{self.get_currency_symbol()} ") # Replaced GH₵
         self.manage_cost_input.setFixedHeight(35)
         
         update_cost_btn = QPushButton("Update Cost")
@@ -187,13 +191,13 @@ class ManageStockDialog(QDialog):
         # Cost Price (Added)
         self.add_cost_input = QDoubleSpinBox()
         self.add_cost_input.setMaximum(999999.99)
-        self.add_cost_input.setPrefix("GH₵ ")
-        form_layout.addRow("Cost Price (GH₵)*:", self.add_cost_input)
+        self.add_cost_input.setPrefix(f"{self.get_currency_symbol()} ") # Replaced GH₵
+        form_layout.addRow(f"Cost Price ({self.get_currency_symbol()})*:", self.add_cost_input) # Replaced GH₵
 
         self.add_price_input = QDoubleSpinBox()
         self.add_price_input.setMaximum(999999.99)
-        self.add_price_input.setPrefix("GH₵ ")
-        form_layout.addRow("Selling Price (GH₵)*:", self.add_price_input)
+        self.add_price_input.setPrefix(f"{self.get_currency_symbol()} ") # Replaced GH₵
+        form_layout.addRow(f"Selling Price ({self.get_currency_symbol()})*:", self.add_price_input) # Replaced GH₵
         
         self.add_unit_combo = QComboBox()
         self.add_unit_combo.setObjectName("inputField")

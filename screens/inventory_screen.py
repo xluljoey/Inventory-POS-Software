@@ -11,7 +11,7 @@ from database.models import User, Product
 from services.inventory_service import InventoryService
 from ui.dialogs import AddProductDialog, EditProductDialog, ProductDetailsDialog
 from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog
-
+from config.app_config import AppConfig # Added
 
 class InventoryScreen(QWidget):
     """Inventory management screen with main content area"""
@@ -23,6 +23,9 @@ class InventoryScreen(QWidget):
         self.init_ui()
         self.load_inventory_data()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         """Initialize the inventory screen UI without sidebar"""
         # Set main background color
@@ -116,7 +119,7 @@ class InventoryScreen(QWidget):
         self.search_input.textChanged.connect(self.on_search_changed)
         search_layout.addWidget(self.search_input)
         
-        header_layout.addWidget(search_container)
+        main_layout.addWidget(search_container)
         
         main_layout.addLayout(header_layout)
         
@@ -258,9 +261,9 @@ class InventoryScreen(QWidget):
             quantity_layout.addWidget(quantity_label)
             self.product_table.setCellWidget(row, 3, quantity_widget)
             
-            # Format prices with GHS currency
-            cost_item = QTableWidgetItem(f"GH₵ {product['cost_price']:.2f}")
-            selling_item = QTableWidgetItem(f"GH₵ {product['selling_price']:.2f}")
+            # Format prices with dynamic currency
+            cost_item = QTableWidgetItem(f"{self.get_currency_symbol()} {product['cost_price']:.2f}") # Replaced GH₵
+            selling_item = QTableWidgetItem(f"{self.get_currency_symbol()} {product['selling_price']:.2f}") # Replaced GH₵
             cost_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             selling_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.product_table.setItem(row, 4, cost_item)
@@ -331,8 +334,7 @@ class InventoryScreen(QWidget):
                     error_dialog = CustomErrorDialog("Error", "Failed to add product", self)
                     error_dialog.exec()
         except Exception as e:
-            error_dialog = CustomErrorDialog("Error", f"Failed to add product: {str(e)}", self)
-            error_dialog.exec()
+            error_dialog = CustomErrorDialog("Error", f"Failed to add product: {str(e)}", self).exec()
 
     def view_product(self, row):
         """View product details (Read-only)"""
@@ -389,8 +391,7 @@ class InventoryScreen(QWidget):
                     error_dialog = CustomErrorDialog("Error", "Failed to update product", self)
                     error_dialog.exec()
             except Exception as e:
-                error_dialog = CustomErrorDialog("Error", f"Failed to update product: {str(e)}", self)
-                error_dialog.exec()
+                error_dialog = CustomErrorDialog("Error", f"Failed to update product: {str(e)}", self).exec()
 
     def delete_product(self, row):
         """Delete product at specified row - check role"""
@@ -425,5 +426,4 @@ class InventoryScreen(QWidget):
                     error_dialog = CustomErrorDialog("Error", "Failed to delete product", self)
                     error_dialog.exec()
             except Exception as e:
-                error_dialog = CustomErrorDialog("Error", f"Failed to delete product: {str(e)}", self)
-                error_dialog.exec()
+                error_dialog = CustomErrorDialog("Error", f"Failed to delete product: {str(e)}", self).exec()

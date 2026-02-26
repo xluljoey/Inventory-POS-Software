@@ -9,8 +9,7 @@ from PySide6.QtGui import QFont
 
 from services.inventory_service import InventoryService
 from services.customer_service import CustomerService
-
-
+from config.app_config import AppConfig # Added import
 
 
 class EditProductDialog(QDialog):
@@ -577,6 +576,11 @@ class AddProductDialog(QDialog):
         self.notes_input.setObjectName("inputField")
         form_layout.addRow("Notes", self.notes_input)
         
+        # SPRINT 5 FIX: Add Batch Number input
+        self.batch_number_input = QLineEdit()
+        self.batch_number_input.setObjectName("inputField")
+        form_layout.addRow("Batch Number", self.batch_number_input)
+
         layout.addLayout(form_layout)
         
         # Buttons
@@ -613,7 +617,7 @@ class AddProductDialog(QDialog):
         """Open dialog to add a new category"""
         dialog = AddCategoryDialog(self)
         if dialog.exec() == QDialog.Accepted:
-            category_data = dialog.get_category_data()
+            category_data = dialog.get_data()
             if category_data['name']:  # Check if name is provided
                 try:
                     category_id = InventoryService.add_category(category_data)
@@ -660,8 +664,11 @@ class AddProductDialog(QDialog):
             'reorder_level': int(self.reorder_level_input.value()),
             'supplier': self.supplier_input.text().strip() or None,
             'notes': self.notes_input.text().strip() or None,
-            'expiry_date': None  # Not implemented in this version
+            'expiry_date': None,
+            'batch_number': self.batch_number_input.text().strip() or None
         }
+
+# The remaining classes (PayDebtDialog, ProductDetailsDialog) follow, unchanged.
 
 
 from ui.confirm_dialog import ClearDebtConfirmationDialog
@@ -678,6 +685,9 @@ class PayDebtDialog(QDialog):
         self.setFixedSize(400, 250)
         self.init_ui()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -693,7 +703,7 @@ class PayDebtDialog(QDialog):
         debt_frame = QFrame()
         debt_frame.setStyleSheet("background-color: #FFF3E0; border-radius: 6px; padding: 10px;")
         debt_layout = QHBoxLayout(debt_frame)
-        debt_label = QLabel(f"Current Debt: GH₵ {self.current_debt:,.2f}")
+        debt_label = QLabel(f"Current Debt: {self.get_currency_symbol()} {self.current_debt:,.2f}") # Replaced GH₵
         debt_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #E65100;")
         debt_label.setAlignment(Qt.AlignCenter)
         debt_layout.addWidget(debt_label)
@@ -701,7 +711,7 @@ class PayDebtDialog(QDialog):
         
         # Input Field
         self.amount_input = QDoubleSpinBox()
-        self.amount_input.setPrefix("GH₵ ")
+        self.amount_input.setPrefix(f"{self.get_currency_symbol()} ") # Replaced GH₵
         self.amount_input.setMaximum(999999.99)
         self.amount_input.setDecimals(2)
         self.amount_input.setStyleSheet("""
@@ -797,6 +807,9 @@ class ProductDetailsDialog(QDialog):
         self.show_cost = show_cost
         self.init_ui()
         
+    def get_currency_symbol(self): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 30, 30, 30)
@@ -844,10 +857,10 @@ class ProductDetailsDialog(QDialog):
         add_row("Category:", self.product_data.get('category', 'N/A'))
         add_row("Unit Type:", self.product_data.get('unit_type', 'pieces'))
         add_row("Quantity:", f"{self.product_data.get('quantity', 0)} {self.product_data.get('unit_type', 'pieces')}")
-        add_row("Selling Price:", f"GH₵ {self.product_data.get('selling_price', 0):.2f}")
+        add_row("Selling Price:", f"{self.get_currency_symbol()} {self.product_data.get('selling_price', 0):.2f}") # Replaced GH₵
         
         if self.show_cost:
-            add_row("Cost Price:", f"GH₵ {self.product_data.get('cost_price', 0):.2f}")
+            add_row("Cost Price:", f"{self.get_currency_symbol()} {self.product_data.get('cost_price', 0):.2f}") # Replaced GH₵
             # Calculate Margin
             cp = self.product_data.get('cost_price', 0)
             sp = self.product_data.get('selling_price', 0)

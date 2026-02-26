@@ -6,7 +6,7 @@ Using PySide6 QtWidgets for the UI (stable alternative to QML)
 
 import os, sys
 import traceback # Added for exception_hook
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer # QTimer added
 from PySide6.QtGui import QGuiApplication
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
@@ -25,12 +25,14 @@ sys.excepthook = exception_hook
 logger.info("Application starting up...")
 
 
-from core import config
+# from core import config # No longer needed
 from utils.cloud_sync import SyncManager
 
 from config.database_config import DatabaseConfig
 from services.auth_service import AuthService
 from database.models import User
+from config.app_config import AppConfig # Imported AppConfig for settings
+
 
 # SPRINT FIX: Import all major services at top-level to prevent circular import issues
 from services.sales_service import SalesService
@@ -59,6 +61,8 @@ class MainWindow(QMainWindow):
         logger.info("MainWindow.__init__ started")
         super().__init__()
         self.current_user = None
+        self.sync_manager = None # For auto-backup
+        self.backup_timer = None # For auto-backup
         logger.info("Calling init_ui...")
         self.init_ui()
         logger.info("Calling load_styles...")
@@ -373,6 +377,7 @@ def main():
         logger.info("Checking for test data...")
         from database.database import DatabaseService
         from datetime import datetime
+        from config.app_config import AppConfig # Imported for auto-backup setting
         
         # --- FIRST-RUN SETUP CHECK ---
         business_setting = DatabaseService.get_setting("business_name")
@@ -402,11 +407,21 @@ def main():
         logger.info("Creating MainWindow...")
         main_window = MainWindow()
         
-        # Start Premium Sync Thread if enabled
-        # if config.IS_PREMIUM: # config.IS_PREMIUM is not defined or imported.
-        #     main_window.sync_worker = SyncManager()
-        #     main_window.sync_worker.start()
-        #     logger.info("Premium Sync Engine initialized.")
+        # Auto Cloud Backup: Initialize and start QTimer if enabled
+        auto_backup_enabled = AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1"
+        if auto_backup_enabled:
+            logger.info("Auto Cloud Backup is enabled. Initializing sync manager and timer.")
+            main_window.sync_manager = SyncManager() # Instantiate SyncManager
+            main_window.backup_timer = QTimer(main_window) # Create QTimer
+            
+            # Connect timer to sync manager's start_sync method
+            main_window.backup_timer.timeout.connect(main_window.sync_manager.start_sync)
+            
+            # Start timer with a 15-minute interval (900,000 ms)
+            main_window.backup_timer.start(15 * 60 * 1000)
+            logger.info(f"Auto Cloud Backup timer started with 15 minute interval.")
+        else:
+            logger.info("Auto Cloud Backup is disabled.")
 
         logger.info("Showing MainWindow...")
         main_window.show()

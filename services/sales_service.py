@@ -4,10 +4,15 @@ from loguru import logger
 from database.database import DatabaseService
 from database.models import Sale, SaleItem, CustomerPayment
 from services.customer_service import CustomerService # SPRINT FIX: Import CustomerService
+from config.app_config import AppConfig # Added
 
 class SalesService:
     """Service for sales and POS operations"""
     
+    @staticmethod
+    def get_currency_symbol(): # Added method
+        return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
+
     @staticmethod
     def create_sale(sale_data: dict) -> int:
         """Create a new sale"""
@@ -75,9 +80,9 @@ class SalesService:
             if new_outstanding_balance > customer['credit_limit']:
                 raise ValueError(
                     f"Credit limit exceeded for {customer['name']}. "
-                    f"Available credit: GH₵{customer['available_credit']:.2f}, "
-                    f"Sale amount: GH₵{total_sale_amount:.2f}, "
-                    f"New outstanding: GH₵{new_outstanding_balance:.2f}."
+                    f"Available credit: {SalesService.get_currency_symbol()}{customer['available_credit']:.2f}, "
+                    f"Sale amount: {SalesService.get_currency_symbol()}{total_sale_amount:.2f}, "
+                    f"New outstanding: {SalesService.get_currency_symbol()}{new_outstanding_balance:.2f}."
                 )
         
         # Create the sale
