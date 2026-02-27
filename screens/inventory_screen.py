@@ -182,19 +182,28 @@ class InventoryScreen(QWidget):
 
     def set_current_user(self, user: User):
         """Set the current user and update UI permissions"""
-        print(f"DEBUG: InventoryScreen.set_current_user called for {user.username} with role {user.role}")
         self.current_user = user
-        if hasattr(self, 'manage_stock_btn'):
-            is_admin = (user.role == "admin")
-            self.manage_stock_btn.setVisible(is_admin)
-            if self.product_table:
-                # Hide/show Cost Price column based on user role and setting
-                show_cost_to_sales_rep = AppConfig.get_setting("show_cost_to_sales_rep", "0") == "1"
-                self.product_table.setColumnHidden(4, not (is_admin or show_cost_to_sales_rep)) # Hide/show Cost Price
-        else:
-            print("DEBUG: manage_stock_btn NOT FOUND in InventoryScreen")
-        self.load_inventory_data() # Refresh to update action buttons
+        self.check_permissions()
+        self.load_inventory_data() # Refresh data which will in turn refresh action buttons
 
+    def check_permissions(self):
+        """Disable editing features for non-admins and sales reps."""
+        is_admin = self.current_user and self.current_user.role == "admin"
+
+        # Manage stock button visibility and tooltip
+        if hasattr(self, 'manage_stock_btn'):
+            self.manage_stock_btn.setVisible(is_admin)
+            if not is_admin:
+                self.manage_stock_btn.setToolTip("Admin privileges required to manage stock.")
+        
+        # Show/hide 'Cost Price' column
+        if self.product_table:
+            self.product_table.setColumnHidden(4, not is_admin)
+        
+        # Table edit triggers
+        if self.current_user and self.current_user.role == "sales_rep":
+            self.product_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            
     def open_manage_stock_dialog(self):
         """Open the Manage Stock dialog (Admin only)"""
         if not self.current_user or self.current_user.role != "admin":
@@ -298,52 +307,44 @@ class InventoryScreen(QWidget):
             view_btn.clicked.connect(lambda checked=False, r=row: self.view_product(r))
             actions_layout.addWidget(view_btn)
 
-            # Admin only actions
-            is_admin = (self.current_user and self.current_user.role == "admin")
+            if self.current_user and self.current_user.role == "admin":
+                edit_btn = QPushButton("✏️ Edit")
+                edit_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #FFA000;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        min-height: 24px;
+                    }
+                    QPushButton:hover {
+                        background-color: #FF8F00;
+                    }
+                """)
+                edit_btn.clicked.connect(lambda checked=False, r=row: self.edit_product(r))
+                actions_layout.addWidget(edit_btn)
 
-            edit_btn = QPushButton("✏️ Edit")
-            edit_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffc107;
-                    color: #333333;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 4px 8px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    min-height: 24px;
-                }
-                QPushButton:hover {
-                    background-color: #ffb300;
-                }
-            """)
-            edit_btn.clicked.connect(lambda checked=False, r=row: self.edit_product(r))
-            edit_btn.setEnabled(is_admin) # Disable for sales rep
-            if not is_admin:
-                edit_btn.setToolTip("Admin privileges required to edit products.")
-            actions_layout.addWidget(edit_btn)
-            
-            delete_btn = QPushButton("🗑️ Delete")
-            delete_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #f44336;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 4px 8px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    min-height: 24px;
-                }
-                QPushButton:hover {
-                    background-color: #e53935;
-                }
-            """)
-            delete_btn.clicked.connect(lambda checked=False, r=row: self.delete_product(r))
-            delete_btn.setEnabled(is_admin) # Disable for sales rep
-            if not is_admin:
-                delete_btn.setToolTip("Admin privileges required to delete products.")
-            actions_layout.addWidget(delete_btn)
+                delete_btn = QPushButton("🗑️ Delete")
+                delete_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #D32F2F;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        min-height: 24px;
+                    }
+                    QPushButton:hover {
+                        background-color: #C62828;
+                    }
+                """)
+                delete_btn.clicked.connect(lambda checked=False, r=row: self.delete_product(r))
+                actions_layout.addWidget(delete_btn)
             
             self.product_table.setCellWidget(row, 6, actions_widget)
     
