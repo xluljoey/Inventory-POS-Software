@@ -462,7 +462,7 @@ class CustomersScreen(QWidget):
     
     def on_add_customer_clicked(self):
         if self.current_user and self.current_user.role != "admin":
-            CustomWarningDialog("Access Denied", "Admin privileges required to add customers.", self).exec()
+            CustomWarningDialog("Access Denied", "You do not have permission to add customers.", self).exec()
             return
         try:
             dialog = AddCustomerDialog(self)
@@ -523,7 +523,7 @@ class CustomersScreen(QWidget):
 
 
 class CustomerHistoryDialog(QDialog):
-    """Redesigned Customer View with 3 Tabs: Sales, Credit, Payment History"""
+    \"\"\"Redesigned Customer View with 3 Tabs: Sales, Credit, Payment History\"\"\"
     
     def __init__(self, parent=None, customer_data=None, current_user=None):
         super().__init__(parent)
@@ -568,7 +568,7 @@ class CustomerHistoryDialog(QDialog):
         # Pay Debt Button
         self.pay_debt_btn = QPushButton("Pay Debt")
         self.pay_debt_btn.setCursor(Qt.PointingHandCursor)
-        self.pay_debt_btn.setStyleSheet("""
+        self.pay_debt_btn.setStyleSheet(\"\"\"
             QPushButton {
                 background-color: #4CAF50;
                 color: white;
@@ -579,7 +579,7 @@ class CustomerHistoryDialog(QDialog):
             }
             QPushButton:hover { background-color: #388E3C; }
             QPushButton:disabled { background-color: #BDBDBD; color: #757575; }
-        """)
+        \"\"\")
         self.pay_debt_btn.clicked.connect(self.on_pay_debt_clicked)
         
         # RBAC Check for Pay Debt
@@ -594,11 +594,11 @@ class CustomerHistoryDialog(QDialog):
         
         # Tabs
         self.tabs = QTabWidget()
-        self.tabs.setStyleSheet("""
+        self.tabs.setStyleSheet(\"\"\"
             QTabWidget::pane { border: 1px solid #E0E0E0; background: white; border-radius: 8px; }
             QTabBar::tab { background: #F5F5F5; padding: 10px 20px; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px; }
             QTabBar::tab:selected { background: white; color: #1976D2; font-weight: bold; border-bottom: 2px solid #1976D2; }
-        """)
+        \"\"\")
         
         self.sales_tab = self.create_sales_history_tab()
         self.credit_tab = self.create_credit_history_tab()
@@ -617,7 +617,7 @@ class CustomerHistoryDialog(QDialog):
         self.close_btn = QPushButton("Close")
         self.close_btn.setCursor(Qt.PointingHandCursor)
         self.close_btn.setFixedSize(100, 40)
-        self.close_btn.setStyleSheet("""
+        self.close_btn.setStyleSheet(\"\"\"
             QPushButton {
                 background-color: #757575;
                 color: white;
@@ -627,7 +627,7 @@ class CustomerHistoryDialog(QDialog):
                 font-size: 14px;
             }
             QPushButton:hover { background-color: #616161; }
-        """)
+        \"\"\")
         self.close_btn.clicked.connect(self.reject)
         
         close_btn_layout.addWidget(self.close_btn)
@@ -690,7 +690,7 @@ class CustomerHistoryDialog(QDialog):
         # Table
         self.sales_table = QTableWidget()
         self.sales_table.setColumnCount(6)
-        self.sales_table.setHorizontalHeaderLabels(["Date", "Product", "Quantity", "Total Price", "Amount Paid", "Debt Added"])
+        self.sales_table.setHorizontalHeaderLabels(["Date", "Product", "Quantity", "Unit Price", "Total Price", "Amount Paid", "Debt Added"])
         self.sales_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         l.addWidget(self.sales_table)
         return tab
@@ -834,3 +834,4 @@ class CustomerHistoryDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load customer history: {str(e)}")
             print(f"Error loading customer history: {e}")
+"""
