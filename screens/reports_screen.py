@@ -5,7 +5,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QCalendarWidget, QTabWidget, QMessageBox, QFileDialog,
                                QStackedWidget, QSizePolicy, QSpacerItem) # Added QSizePolicy, QSpacerItem
 from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QTextDocument
+from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 from loguru import logger
 import pandas as pd
 from fpdf import FPDF
@@ -546,6 +547,11 @@ class ReportsScreen(QWidget):
         layout.addWidget(self.stock_audit_table_stack, 1) # Table container gets 1 stretch
         return tab
     
+    def refresh_data(self):
+        """Refresh all report data when global data changes"""
+        self.load_report_data()
+        self.load_daily_sales_data()
+
     def get_date_range(self):
         preset = self.date_preset_combo.currentText()
         today = datetime.now().date()
@@ -924,6 +930,48 @@ class ReportsScreen(QWidget):
             
         return headers, data, report_name
 
+    def generate_report_html(self, headers, data, title):
+        """Generate a clean HTML table for printing"""
+        html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                h1 {{ color: #2C3E50; text-align: center; }}
+                h3 {{ color: #7F8C8D; text-align: center; margin-bottom: 30px; }}
+                table {{ border-collapse: collapse; width: 100%; }}
+                th, td {{ border: 1px solid #BDC3C7; padding: 10px; text-align: left; font-size: 12px; }}
+                th {{ background-color: #1976D2; color: white; }}
+                tr:nth-child(even) {{ background-color: #F8F9FA; }}
+                .footer {{ text-align: right; margin-top: 20px; font-size: 10px; color: #95A5A6; }}
+            </style>
+        </head>
+        <body>
+            <h1>{title.replace('_', ' ').upper()}</h1>
+            <h3>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        {"".join(f"<th>{h}</th>" for h in headers)}
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        for row in data:
+            html += "<tr>"
+            for item in row:
+                html += f"<td>{str(item)}</td>"
+            html += "</tr>"
+            
+        html += f"""
+                </tbody>
+            </table>
+            <div class="footer">Inventory Management System - {datetime.now().year}</div>
+        </body>
+        </html>
+        """
+        return html
+
     def on_pdf_export_clicked(self):
         """Generate actual professional PDF from table data."""
         if self.report_tabs.currentIndex() == 3 and self.current_user.role != "admin":
@@ -1005,47 +1053,23 @@ class ReportsScreen(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to generate Excel: {str(e)}")
 
     def on_print_clicked(self):
-        """Trigger print dialog by generating a temp PDF and opening it."""
+        """Direct printing using QPrinter and QTextDocument"""
         headers, data, name = self._scrape_table_data()
-        if not headers: return
+        if not headers:
+            return
 
-        temp_pdf = os.path.join("logs", f"temp_print_{datetime.now().strftime('%H%M%S')}.pdf")
-        
         try:
-            pdf = FPDF(orientation='L', unit='mm', format='A4')
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 10, f"PRINT PREVIEW - {name.replace('_', ' ')}", ln=True, align='C')
-            pdf.ln(5)
+            printer = QPrinter(QPrinter.HighResolution)
+            dialog = QPrintDialog(printer, self)
             
-            pdf.set_font("Arial", 'B', 9)
-            col_width = (pdf.w - pdf.l_margin - pdf.r_margin) / len(headers) # Corrected line
-            for h in headers:
-                pdf.cell(col_width, 8, h, border=1)
-            pdf.ln()
-            
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font("Arial", '', 8)
-            for row in data:
-                for item in row:
-                    # Fix character encoding error for Cedi symbol
-                    clean_item = str(item).replace("₵", "GHS")
-                    pdf.cell(col_width, 7, clean_item[:25], border=1)
-                pdf.ln()
-                
-            pdf.output(temp_pdf)
-            
-            import subprocess
-            import platform
-            if platform.system() == "Windows":
-                os.startfile(temp_pdf, "print")
-            elif platform.system() == "Darwin": # macOS
-                subprocess.run(["open", temp_pdf])
-            else: # Linux
-                subprocess.run(["xdg-open", temp_pdf])
-                
-            QMessageBox.information(self, "Printing", "The report has been sent to your system viewer for printing.")
+            if dialog.exec() == QPrintDialog.Accepted:
+                document = QTextDocument()
+                html = self.generate_report_html(headers, data, name) 
+                document.setHtml(html)
+                document.print_(printer)
+                QMessageBox.information(self, "Success", "Report sent to printer.")
         except Exception as e:
+            logger.error(f"Printing failed: {e}")
             QMessageBox.critical(self, "Print Error", f"Could not trigger print: {str(e)}")
 
     def refresh_daily_sales_data(self):

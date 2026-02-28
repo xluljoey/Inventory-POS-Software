@@ -89,6 +89,11 @@ class SalesService:
         return SalesService.create_sale(sale_data)
 
     @staticmethod
+    def get_sales_by_customer(customer_id: int) -> List[dict]:
+        """Get all sales for a specific customer"""
+        return DatabaseService.get_sales_by_customer_id(customer_id)
+
+    @staticmethod
     def get_recent_sales(days: int = 30) -> List[dict]:
         """Get sales from the last N days."""
         end_date = datetime.now()

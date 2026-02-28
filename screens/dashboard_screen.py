@@ -70,19 +70,32 @@ class DashboardScreen(QWidget):
         
         main_layout.addWidget(header_widget)
         
-        # Stats cards section with proper grid layout
-        stats_widget = QFrame()
-        stats_widget.setObjectName("statsWidget")
-        stats_layout = QGridLayout(stats_widget)
-        stats_layout.setContentsMargins(0, 0, 0, 0)
-        stats_layout.setSpacing(15)  # Grid spacing as per spec
+        # Row 1: Inventory Stats (4 Cards in QHBoxLayout)
+        inventory_row_widget = QFrame()
+        inventory_row_layout = QHBoxLayout(inventory_row_widget)
+        inventory_row_layout.setContentsMargins(0, 0, 0, 0)
+        inventory_row_layout.setSpacing(20)
+        inventory_row_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         
-        # Create stats cards with design matching Customers screen cards
         # Inventory Stats (Admin Only) - Color Blocked style
         self.out_of_stock_card = self.create_kpi_card("Out of Stock", "0", "#EF4444", self.show_out_of_stock_dialog)
         self.below_minimum_card = self.create_kpi_card("Near Expiry", "0", "#F59E0B", self.show_near_expiry_dialog)
         self.low_stock_card = self.create_kpi_card("Low Stock", "0", "#A855F7", self.show_low_stock_dialog)
-        self.standard_inventory_card = self.create_kpi_card("Expired Products", "0", "#374151", self.show_expired_products_dialog)
+        self.standard_inventory_card = self.create_kpi_card("Expired", "0", "#374151", self.show_expired_products_dialog)
+        
+        inventory_row_layout.addWidget(self.out_of_stock_card)
+        inventory_row_layout.addWidget(self.below_minimum_card)
+        inventory_row_layout.addWidget(self.low_stock_card)
+        inventory_row_layout.addWidget(self.standard_inventory_card)
+        
+        main_layout.addWidget(inventory_row_widget)
+        
+        # Row 2: Sales & Customer Overview (4 Cards in QHBoxLayout)
+        sales_row_widget = QFrame()
+        sales_row_layout = QHBoxLayout(sales_row_widget)
+        sales_row_layout.setContentsMargins(0, 0, 0, 0)
+        sales_row_layout.setSpacing(20)
+        sales_row_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         
         # Sales & Customer Overview Cards (Visible to all)
         self.total_sales_card = self.create_kpi_card("Today's Revenue", f"{self.get_currency_symbol()}0", "#192A56", self.go_to_daily_sales)
@@ -90,23 +103,13 @@ class DashboardScreen(QWidget):
         self.avg_sales_card = self.create_kpi_card("Average Sales", f"{self.get_currency_symbol()}0", "#4A76D9")
         self.total_customers_card = self.create_kpi_card("Total Customers", "0", "#00BCD4", self.go_to_customers)
         
-        # Add cards to grid
-        stats_layout.addWidget(self.out_of_stock_card, 0, 0)
-        stats_layout.addWidget(self.below_minimum_card, 0, 1)
-        stats_layout.addWidget(self.low_stock_card, 0, 2)
-        stats_layout.addWidget(self.standard_inventory_card, 0, 3)
+        sales_row_layout.addWidget(self.total_sales_card)
+        sales_row_layout.addWidget(self.total_orders_card)
+        sales_row_layout.addWidget(self.avg_sales_card)
+        sales_row_layout.addWidget(self.total_customers_card)
         
-        stats_layout.addWidget(self.total_sales_card, 1, 0)
-        stats_layout.addWidget(self.total_orders_card, 1, 1)
-        stats_layout.addWidget(self.avg_sales_card, 1, 2)
-        stats_layout.addWidget(self.total_customers_card, 1, 3)
-        
-        # Set column stretch for equal distribution
-        for col in range(4):
-            stats_layout.setColumnStretch(col, 1)
-        
-        main_layout.addWidget(stats_widget)
-        
+        main_layout.addWidget(sales_row_widget)
+
         # Quick actions section
         actions_widget = QFrame()
         actions_widget.setObjectName("actionsWidget")
@@ -236,12 +239,12 @@ class DashboardScreen(QWidget):
         else:
             card = QFrame()
             
-        card.setFixedSize(280, 150)
+        card.setFixedSize(280, 160)
         
         card.setStyleSheet(f"""
             QFrame {{
-                background-color: transparent;
-                border-radius: 12px;
+                background-color: {bg_color};
+                border-radius: 10px;
                 border: none;
             }}
         """)
@@ -253,50 +256,52 @@ class DashboardScreen(QWidget):
         # TOP SECTION (Header)
         header_section = QFrame()
         header_section.setFixedHeight(60)
-        header_section.setStyleSheet(f"""
-            QFrame {{
-                background-color: {bg_color};
-                border-top-left-radius: 12px;
-                border-top-right-radius: 12px;
+        header_section.setStyleSheet("""
+            QFrame {
+                background-color: transparent;
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
                 border-bottom-left-radius: 0px;
                 border-bottom-right-radius: 0px;
-            }}
+            }
         """)
         header_layout = QVBoxLayout(header_section)
-        header_layout.setContentsMargins(15, 10, 15, 10)
+        header_layout.setContentsMargins(20, 10, 20, 0) 
+        header_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         
         title_label = QLabel(title)
-        title_label.setStyleSheet("color: white; font-size: 15px; font-weight: 600; background: transparent;")
+        title_label.setStyleSheet("color: white; font-size: 16px; font-weight: 600; background: transparent;")
         header_layout.addWidget(title_label)
         
-        if on_click:
-            hint_label = QLabel("click to view")
-            hint_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 10px; font-style: italic; background: transparent;")
-            hint_label.setAlignment(Qt.AlignRight)
-            header_layout.addWidget(hint_label)
-        else:
-            header_layout.addStretch()
-
         card_layout.addWidget(header_section)
         
         # BOTTOM SECTION (Body)
         body_section = QFrame()
+        body_section.setFixedHeight(100)
         body_section.setStyleSheet("""
             QFrame {
-                background-color: #2C3E50;
+                background-color: rgba(0, 0, 0, 0.2);
                 border-top-left-radius: 0px;
                 border-top-right-radius: 0px;
-                border-bottom-left-radius: 12px;
-                border-bottom-right-radius: 12px;
+                border-bottom-left-radius: 10px;
+                border-bottom-right-radius: 10px;
             }
         """)
         body_layout = QVBoxLayout(body_section)
-        body_layout.setContentsMargins(15, 10, 15, 10)
-        body_layout.setAlignment(Qt.AlignCenter)
+        body_layout.setContentsMargins(20, 0, 20, 15) 
         
         value_label = QLabel(value)
         value_label.setStyleSheet("color: white; font-size: 32px; font-weight: bold; background: transparent;")
+        value_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         body_layout.addWidget(value_label)
+        
+        if on_click:
+            hint_label = QLabel("click to view")
+            hint_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 11px; font-style: italic; background: transparent;")
+            hint_label.setAlignment(Qt.AlignRight | Qt.AlignBottom)
+            body_layout.addWidget(hint_label)
+        else:
+            body_layout.addStretch()
         
         card_layout.addWidget(body_section)
         
@@ -417,12 +422,28 @@ class DashboardScreen(QWidget):
         if self.main_window:
             self.main_window.show_reports()
     
+    def showEvent(self, event):
+        """Refresh dashboard data whenever the screen is shown"""
+        super().showEvent(event)
+        self.update_dashboard()
+
+    def refresh_data(self):
+        """Refresh dashboard data when global data changes"""
+        self.update_dashboard()
+
     def update_dashboard(self):
-        """Update dashboard statistics"""
+        """Update dashboard statistics, clearing old data first"""
         if not self.current_user:
             return
             
         try:
+            # Clear old labels/table first to avoid overlaps
+            self.out_of_stock_card.value_label.setText("...")
+            self.below_minimum_card.value_label.setText("...")
+            self.low_stock_card.value_label.setText("...")
+            self.standard_inventory_card.value_label.setText("...")
+            self.activity_table.setRowCount(0)
+
             # SPRINT FIX: Local imports to avoid circular dependencies
             from services.sales_service import SalesService
             from services.customer_service import CustomerService

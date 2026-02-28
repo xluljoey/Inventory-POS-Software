@@ -51,16 +51,22 @@ def exception_hook(exctype, value, tb):
     """
     error_msg = "".join(traceback.format_exception(exctype, value, tb))
     logger.critical(f"FATAL CRASH:\n{error_msg}")
-
-    # Optional: Show a "Something went wrong" popup to the user
-    # Check if QApplication instance exists before trying to show a QMessageBox
-    if QApplication.instance():
-        log_path_str = str(log_file_path.parent)
-        QMessageBox.critical(
-            None,
-            "Critical Error",
-            f"An unexpected error occurred. A crash report has been saved to:\n{log_path_str}\n\nPlease contact support."
-        )
+    # Avoid showing a blocking QMessageBox here because many Qt callbacks
+    # and library exceptions may surface during startup; instead we log
+    # the crash and write it to the log file. If an interactive popup is
+    # desired during development, set the environment variable
+    # `INVENTORYAPP_SHOW_CRASH_POPUP=1` and the popup will be shown.
+    try:
+        if os.getenv('INVENTORYAPP_SHOW_CRASH_POPUP') == '1' and QApplication.instance():
+            log_path_str = str(log_file_path.parent)
+            QMessageBox.critical(
+                None,
+                "Critical Error",
+                f"An unexpected error occurred. A crash report has been saved to:\n{log_path_str}\n\nPlease contact support."
+            )
+    except Exception:
+        # Never let the exception hook itself raise
+        pass
     
     # Call the original excepthook to ensure Python's default behavior (e.g., printing to stderr)
     sys.__excepthook__(exctype, value, tb)

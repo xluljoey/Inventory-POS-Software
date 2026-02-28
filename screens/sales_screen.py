@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QLabel, QPushButton, QFrame, QTableWidget, 
                                QTableWidgetItem, QLineEdit, QComboBox, 
                                QHeaderView, QAbstractItemView, QMessageBox, QCompleter)
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QTimer
 from PySide6.QtGui import QFont, QColor
 
 from database.models import User, Sale, SaleItem
@@ -175,7 +175,7 @@ class SalesScreen(QWidget):
         self.cart_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents) # Qty
         self.cart_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents) # Subtotal
         self.cart_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed) # Action
-        self.cart_table.setColumnWidth(3, 50)
+        self.cart_table.setColumnWidth(3, 40)
         right_layout.addWidget(self.cart_table)
         
         # Totals Display
@@ -389,13 +389,14 @@ class SalesScreen(QWidget):
         remove_btn_style = """
             QPushButton {
                 background-color: transparent;
-                color: #dc2626;
+                color: #EF4444;
                 border: none;
+                padding: 0;
                 font-weight: bold;
-                font-size: 16px;
+                font-size: 18px;
             }
             QPushButton:hover {
-                color: #b91c1c;
+                background-color: rgba(239,68,68,0.08);
             }
         """
 
@@ -446,8 +447,8 @@ class SalesScreen(QWidget):
             remove_layout = QHBoxLayout(remove_container)
             remove_layout.setContentsMargins(0, 0, 0, 0)
             remove_layout.setAlignment(Qt.AlignCenter)
-            remove_btn = QPushButton("✕") # Using 'X' as a clear remove symbol
-            remove_btn.setFixedSize(32, 32)
+            remove_btn = QPushButton("🗑") # Using Trash emoji for better visibility
+            remove_btn.setFixedSize(30, 30)
             remove_btn.setStyleSheet(remove_btn_style)
             remove_btn.setCursor(Qt.PointingHandCursor)
             remove_btn.setToolTip("Remove Item")
@@ -547,6 +548,19 @@ class SalesScreen(QWidget):
                 # CRITICAL FIX #2: Refresh product data to show updated stock
                 self.load_product_data()
                 self.sale_completed.emit()
+                # Force DB commit if a connection attribute exists and refresh dashboard stats
+                try:
+                    conn = getattr(self, 'connection', None)
+                    if conn:
+                        conn.commit()
+                except Exception:
+                    pass
+                try:
+                    main_win = getattr(self, 'main_window', None)
+                    if main_win and getattr(main_win, 'dashboard', None):
+                        QTimer.singleShot(500, main_win.dashboard.load_stats)
+                except Exception:
+                    pass
         except Exception as e:
             CustomErrorDialog("Transaction Error", f"Failed to complete sale: {str(e)}", self).exec()
         

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QHeaderView, QAbstractItemView, QSpinBox, 
                                QDoubleSpinBox, QMessageBox, QDialog, 
                                QDialogButtonBox, QFormLayout, QScrollArea)
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont, QPixmap, QPainter, QColor
 
 from database.models import User, Product
@@ -18,10 +18,24 @@ class InventoryScreen(QWidget):
     
     def __init__(self):
         super().__init__()
+        # Ensure UI is built immediately
+        self.init_ui()
+        # Basic state
         self.current_user = None
         self.all_products = []  # Store all products for filtering
-        self.init_ui()
-        self.load_inventory_data()
+        # Defer loading and permission checks until UI is fully ready
+        QTimer.singleShot(200, self.initial_load)
+
+    def initial_load(self):
+        # Only now, after 200ms, do we touch the UI
+        try:
+            self.load_inventory_data()
+        except Exception:
+            pass
+        try:
+            self.apply_permissions()
+        except Exception:
+            pass
         
     def get_currency_symbol(self): # Added method
         return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
@@ -183,26 +197,43 @@ class InventoryScreen(QWidget):
     def set_current_user(self, user: User):
         """Set the current user and update UI permissions"""
         self.current_user = user
-        self.check_permissions()
-        self.load_inventory_data() # Refresh data which will in turn refresh action buttons
+        self.apply_permissions()
+        if user:
+            self.load_inventory_data() # Refresh data which will in turn refresh action buttons
+
+    def apply_permissions(self):
+        """Strict permission check using the 'NoneType Shield' pattern"""
+        # Safely determine the user's role - default to False
+        is_admin = False
+        role = "rep"
+        if self.current_user:
+            role = self.current_user.role
+            is_admin = (role == "admin")
+        
+        # Shield pattern for all potential management buttons
+        for btn_name in ['manage_stock_btn', 'btn_add', 'btn_edit', 'btn_delete', 'btn_export']:
+            btn = getattr(self, btn_name, None)
+            if btn is not None: # This is the ONLY way to be 100% safe
+                try:
+                    btn.setEnabled(is_admin)
+                    # manage_stock_btn is a special case: should also be hidden for non-admins
+                    if btn_name == 'manage_stock_btn':
+                        btn.setVisible(is_admin)
+                except Exception:
+                    pass
+
+        # Table logic - safely handled via hasattr
+        if hasattr(self, 'product_table') and self.product_table is not None:
+            try:
+                self.product_table.setColumnHidden(4, not is_admin)
+                if role == "sales_rep":
+                    self.product_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            except Exception:
+                pass
 
     def check_permissions(self):
-        """Disable editing features for non-admins and sales reps."""
-        is_admin = self.current_user and self.current_user.role == "admin"
-
-        # Manage stock button visibility and tooltip
-        if hasattr(self, 'manage_stock_btn'):
-            self.manage_stock_btn.setVisible(is_admin)
-            if not is_admin:
-                self.manage_stock_btn.setToolTip("Admin privileges required to manage stock.")
-        
-        # Show/hide 'Cost Price' column
-        if self.product_table:
-            self.product_table.setColumnHidden(4, not is_admin)
-        
-        # Table edit triggers
-        if self.current_user and self.current_user.role == "sales_rep":
-            self.product_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        """Legacy check - delegating to new strict method"""
+        self.apply_permissions()
             
     def open_manage_stock_dialog(self):
         """Open the Manage Stock dialog (Admin only)"""
@@ -217,6 +248,10 @@ class InventoryScreen(QWidget):
                 self.load_inventory_data()
         except Exception as e:
             CustomErrorDialog("Error", f"Could not open Manage Stock dialog: {str(e)}", self).exec()
+
+    def refresh_data(self):
+        """Refresh inventory data when global data changes"""
+        self.load_inventory_data()
 
     def load_inventory_data(self):
         """Load inventory data from the service and handle empty state."""

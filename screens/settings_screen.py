@@ -567,6 +567,7 @@ class SettingsScreen(QWidget):
         restore_desc.setWordWrap(True)
         self.local_restore_btn = QPushButton("Local Restore")
         self.local_restore_btn.setStyleSheet("background-color: #FBC02D; color: #212121; font-weight: bold;")
+        self.local_restore_btn.clicked.connect(self._on_local_restore_clicked)
         restore_card_layout.addWidget(restore_icon, 0, Qt.AlignCenter)
         restore_card_layout.addWidget(restore_desc)
         restore_card_layout.addWidget(self.local_restore_btn, 0, Qt.AlignCenter)
@@ -710,6 +711,55 @@ class SettingsScreen(QWidget):
             logger.error(f"System backup failed: {e}")
             QMessageBox.critical(self, "Backup Error", f"Failed to complete backup: {str(e)}")
 
+    def _on_local_restore_clicked(self):
+        """Handle local database restore with safety checks and restart"""
+        from PySide6.QtWidgets import QFileDialog
+        
+        # 1. FILE PICKER
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Database Backup", "", "Database Files (*.db);;All Files (*)"
+        )
+        
+        if not file_path:
+            return
+            
+        # 2. VALIDATION & WARNING
+        confirm = QMessageBox.warning(
+            self, "⚠ CRITICAL: SYSTEM RESTORE",
+            "This will OVERWRITE your current data with the selected backup.\n\n"
+            "The application will RESTART immediately to apply changes.\n\n"
+            "Do you want to proceed?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        
+        if confirm == QMessageBox.Yes:
+            try:
+                import shutil
+                import os
+                import sys
+                from config.database_config import DatabaseConfig
+                
+                # 3. THE SWAP LOGIC
+                # Step 1: Force-close the existing DB connection
+                DatabaseConfig.close_connection()
+                
+                # Step 2: Overwrite the current database file
+                current_db_path = AppConfig.get_db_path()
+                shutil.copy2(file_path, current_db_path)
+                
+                logger.info(f"Database restored from local file: {file_path}")
+                
+                # 4. AUTO-RESTART
+                QMessageBox.information(self, "Restore Successful", "The database has been restored. Restarting application...")
+                # Fix: Quote sys.executable to handle spaces in path
+                os.execl(f'"{sys.executable}"', f'"{sys.executable}"', *sys.argv)
+                
+            except Exception as e:
+                logger.error(f"Local restore failed: {e}")
+                QMessageBox.critical(self, "Restore Error", f"Failed to restore database: {str(e)}")
+                # Attempt to re-initialize UI/DB if possible, or force exit
+                sys.exit(1)
+
     def _link_google_drive(self):
         """Perform OAuth flow to link Google Drive."""
         if self.current_user.role != "admin":
@@ -805,7 +855,8 @@ class SettingsScreen(QWidget):
         import os
         import sys
         QApplication.quit()
-        os.execl(sys.executable, sys.executable, *sys.argv)
+        # Fix: Quote sys.executable to handle spaces in path
+        os.execl(f'"{sys.executable}"', f'"{sys.executable}"', *sys.argv)
 
     def _create_security_page(self):
         """Implementation of User Management and Security Settings."""

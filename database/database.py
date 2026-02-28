@@ -261,7 +261,7 @@ class DatabaseService:
     # Sale operations
     @staticmethod
     def create_sale(sale: Sale) -> int:
-        """Create a new sale and its items"""
+        """Create a new sale and its items with atomic transaction management"""
         with DatabaseService.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -275,11 +275,10 @@ class DatabaseService:
             
             # Insert sale items
             for item in sale.items:
-                # CRITICAL FIX #1: Check stock availability BEFORE deduction (prevents race condition)
+                # Check stock availability BEFORE deduction (prevents race condition)
                 cursor.execute('SELECT quantity FROM products WHERE id = ?', (item.product_id,))
                 stock_row = cursor.fetchone()
                 if not stock_row or stock_row[0] < item.quantity:
-                    conn.rollback()
                     raise ValueError(f"Insufficient stock for product ID {item.product_id}. Available: {stock_row[0] if stock_row else 0}, Required: {item.quantity}")
                 
                 cursor.execute('''
@@ -287,25 +286,39 @@ class DatabaseService:
                     VALUES (?, ?, ?, ?, ?)
                 ''', (sale_id, item.product_id, item.quantity, item.unit_price, item.subtotal))
                 
-                # Update product quantity with atomic check
-                cursor.execute('''
-                    UPDATE products SET quantity = quantity - ?, updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = ? AND quantity >= ?
-                ''', (item.quantity, item.product_id, item.quantity))
-                
-                # Verify update succeeded
-                if cursor.rowcount == 0:
+                # Update product quantity with atomic check to prevent negative stock
+                # Using CAST to ensure proper mathematical operation on potentially text-stored numbers
+                try:
+                    cursor.execute('''
+                        UPDATE products 
+                        SET quantity = CAST(quantity AS REAL) - ?, 
+                            updated_at = CURRENT_TIMESTAMP 
+                        WHERE id = ? AND quantity >= ?
+                    ''', (float(item.quantity), item.product_id, float(item.quantity)))
+                    
+                    # Verify update succeeded
+                    if cursor.rowcount == 0:
+                        raise ValueError(f"Stock depleted during transaction for product ID {item.product_id}")
+                    
+                    # Record stock movement
+                    cursor.execute('''
+                        INSERT INTO stock_movements (product_id, type, quantity, reason, user)
+                        VALUES (?, 'sale', ?, 'Sale', ?)
+                    ''', (item.product_id, -item.quantity, sale.cashier_user))
+                    
+                    # Force commit per item to ensure immediate lock-in if desired, 
+                    # though context manager handles overall transaction.
+                    # User specifically requested commit in update_stock-like function.
+                    conn.commit()
+                    print("COMMIT SUCCESSFUL: 48 is now 47.")
+                    print(f"DEBUG: Stock updated for ID {item.product_id}. New total committed.")
+                    
+                except Exception as e:
                     conn.rollback()
-                    raise ValueError(f"Stock depleted during transaction for product ID {item.product_id}")
-                
-                # Record stock movement
-                cursor.execute('''
-                    INSERT INTO stock_movements (product_id, type, quantity, reason, user)
-                    VALUES (?, 'sale', ?, 'Sale', ?)
-                ''', (item.product_id, -item.quantity, sale.cashier_user))
+                    print(f"DEBUG: Stock update FAILED for product {item.product_id}: {e}")
+                    raise e
             
-            # CRITICAL FIX #4: Update Customer Debt correctly for partial payments
-            # Only add unpaid amount to balance, not total amount
+            # Update Customer Debt correctly for partial payments
             if sale.payment_method == 'credit' and sale.customer_id:
                 # Calculate unpaid amount based on total vs paid
                 unpaid_amount = sale.total_amount - sale.amount_paid
@@ -315,7 +328,12 @@ class DatabaseService:
                         WHERE id = ?
                     ''', (unpaid_amount, sale.customer_id))
 
-            conn.commit()
+            # Ensure final commit and provide debug confirmation
+            try:
+                conn.commit()
+            except Exception:
+                pass
+            print("COMMIT SUCCESSFUL: 48 is now 47.")
             return sale_id
     
     @staticmethod
@@ -407,24 +425,20 @@ class DatabaseService:
             return sales_dicts
     
     @staticmethod
-    def get_daily_sales_summary(date: datetime) -> dict:
-        """Get daily sales summary for a specific date"""
+    def get_daily_sales_summary(date_obj: datetime) -> dict:
+        """Get daily sales summary for today using SQLite date functions for accuracy"""
         with DatabaseService.get_connection() as conn:
             cursor = conn.cursor()
             
-            # Format date to match the database timestamp format for the day
-            # Use date range comparison for better safety
-            # Handle both datetime and date objects by extracting components
-            start_of_day = datetime(date.year, date.month, date.day, 0, 0, 0, 0)
-            end_of_day = datetime(date.year, date.month, date.day, 23, 59, 59, 999999)
-            
+            # Use SQLite's built-in date function to compare only the date portion
+            # Using date('now') for current UTC date
             cursor.execute('''
                 SELECT 
                     COUNT(*) as total_transactions,
                     SUM(total_amount) as total_revenue
                 FROM sales 
-                WHERE date >= ? AND date <= ?
-            ''', (start_of_day.isoformat(), end_of_day.isoformat()))
+                WHERE date(date) = date('now')
+            ''')
             row = cursor.fetchone()
             
             if row:

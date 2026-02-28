@@ -13,7 +13,7 @@ QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundin
 
 from PySide6.QtWidgets import (QApplication, QMainWindow, QStackedWidget, 
                                QVBoxLayout, QWidget, QHBoxLayout, QSizePolicy, QMessageBox)
-from PySide6.QtCore import Qt, QFile, QTextStream, QSize
+from PySide6.QtCore import Qt, QFile, QTextStream, QSize, Signal
 from PySide6.QtGui import QIcon, QPixmap
 
 # --- GLOBAL EXCEPTION HOOK ---
@@ -56,6 +56,7 @@ from ui.animated_stacked_widget import AnimatedStackedWidget
 
 class MainWindow(QMainWindow):
     """Main application window with navigation and screen management"""
+    data_changed = Signal()
     
     def __init__(self):
         logger.info("MainWindow.__init__ started")
@@ -141,36 +142,55 @@ class MainWindow(QMainWindow):
     
     def init_screens(self):
         """Initialize all application screens"""
-        # Login screen
-        self.login_screen = LoginScreen()
-        self.login_screen.login_successful.connect(self.on_login_success)
-        self.stacked_widget.addWidget(self.login_screen)
-        
-        # Dashboard screen
-        self.dashboard_screen = DashboardScreen()
-        self.dashboard_screen.set_main_window(self)
-        self.stacked_widget.addWidget(self.dashboard_screen)
-        
-        # Inventory screen
-        self.inventory_screen = InventoryScreen()
-        self.stacked_widget.addWidget(self.inventory_screen)
-        
-        # Sales screen
-        self.sales_screen = SalesScreen()
-        self.sales_screen.sale_completed.connect(self.on_sale_completed)
-        self.stacked_widget.addWidget(self.sales_screen)
-        
-        # Customers screen
-        self.customers_screen = CustomersScreen()
-        self.stacked_widget.addWidget(self.customers_screen)
-        
-        # Reports screen
-        self.reports_screen = ReportsScreen()
-        self.stacked_widget.addWidget(self.reports_screen)
-        
-        # Settings screen
-        self.settings_screen = SettingsScreen()
-        self.stacked_widget.addWidget(self.settings_screen)
+        # Create screens defensively so a failure in one doesn't crash startup
+        def _safe_add(widget_name, constructor, connect_fn=None, post_init=None):
+            try:
+                widget = constructor()
+                if connect_fn:
+                    try:
+                        connect_fn(widget)
+                    except Exception:
+                        logger.exception(f"Failed to connect signals for {widget_name}")
+                if post_init:
+                    try:
+                        post_init(widget)
+                    except Exception:
+                        logger.exception(f"Post-init failed for {widget_name}")
+                self.stacked_widget.addWidget(widget)
+                setattr(self, widget_name, widget)
+            except Exception:
+                logger.exception(f"Failed to initialize {widget_name}; adding fallback placeholder")
+                # Fallback placeholder to keep indices stable
+                placeholder = QWidget()
+                layout = QVBoxLayout(placeholder)
+                label = QLabel(f"{widget_name} failed to initialize. See logs for details.")
+                layout.addWidget(label)
+                self.stacked_widget.addWidget(placeholder)
+                setattr(self, widget_name, placeholder)
+
+        # Use the helper to add each screen
+        _safe_add('login_screen', LoginScreen, connect_fn=lambda w: w.login_successful.connect(self.on_login_success))
+        _safe_add('dashboard_screen', DashboardScreen, post_init=lambda w: w.set_main_window(self))
+        _safe_add('inventory_screen', InventoryScreen)
+        _safe_add('sales_screen', SalesScreen, connect_fn=lambda w: w.sale_completed.connect(self.on_sale_completed))
+        _safe_add('customers_screen', CustomersScreen)
+        _safe_add('reports_screen', ReportsScreen)
+        _safe_add('settings_screen', SettingsScreen)
+
+        # Connect global signal to master refresh function
+        self.data_changed.connect(self.global_refresh)
+
+    def global_refresh(self):
+        """Force immediate UI refresh across all tabs to sync with database"""
+        logger.info("Global UI synchronization triggered.")
+        try:
+            self.dashboard_screen.refresh_data()
+            self.inventory_screen.refresh_data()
+            self.customers_screen.refresh_data()
+            self.reports_screen.refresh_data()
+            print("UI Synchronized with Database.")
+        except Exception:
+            logger.exception("Failed during global UI refresh")
     
     def show_login_screen(self):
         """Show the login screen and hide navigation"""
@@ -356,13 +376,8 @@ class MainWindow(QMainWindow):
         self.show_login_screen()
     
     def on_sale_completed(self):
-        """Handle sale completion - refresh reports and dashboard"""
-        self.reports_screen.update_report_data_after_sale()
-        self.reports_screen.refresh_daily_sales_data()
-        self.dashboard_screen.update_dashboard()
-        # Synchronize Inventory and Customers screens
-        self.inventory_screen.load_inventory_data()
-        self.customers_screen.load_customer_data()
+        """Handle sale completion - emit signal to refresh all screens"""
+        self.data_changed.emit()
 
 
 def main():

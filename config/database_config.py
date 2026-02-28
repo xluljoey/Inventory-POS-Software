@@ -6,25 +6,52 @@ from pathlib import Path # Added import
 
 class DatabaseConfig:
     """Database configuration and connection management"""
+    _connection = None
     
+    @staticmethod
+    def get_db_connection_instance():
+        """Get or create a singleton database connection instance"""
+        if DatabaseConfig._connection is None:
+            try:
+                from config.app_config import AppConfig
+                DatabaseConfig._connection = sqlite3.connect(AppConfig.get_db_path(), check_same_thread=False)
+                DatabaseConfig._connection.row_factory = sqlite3.Row
+                
+                # Enable WAL mode and set synchronous to NORMAL for better reliability and performance
+                DatabaseConfig._connection.execute("PRAGMA journal_mode=WAL;")
+                DatabaseConfig._connection.execute("PRAGMA synchronous=NORMAL;")
+                logger.info("Shared database connection initialized with WAL mode.")
+            except sqlite3.Error as e:
+                logger.error(f"Failed to initialize shared database connection: {str(e)}")
+                raise e
+        return DatabaseConfig._connection
+
+    @staticmethod
+    def close_connection():
+        """Force close the singleton database connection"""
+        if DatabaseConfig._connection:
+            try:
+                DatabaseConfig._connection.close()
+                DatabaseConfig._connection = None
+                logger.info("Shared database connection closed.")
+            except sqlite3.Error as e:
+                logger.error(f"Error closing shared database connection: {e}")
+
     @staticmethod
     @contextmanager
     def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
-        """Get a database connection with proper context management"""
-        conn = None
+        """Get the singleton database connection using a context manager-like interface"""
+        # For a true shared connection in a single-threaded GUI, we don't close it in finally
+        # But we yield it to maintain compatibility with existing 'with' blocks
+        conn = DatabaseConfig.get_db_connection_instance()
         try:
-            from config.app_config import AppConfig
-            conn = sqlite3.connect(AppConfig.get_db_path())
-            conn.row_factory = sqlite3.Row  # Enable column access by name
             yield conn
+            conn.commit() # Force commit on success to ensure data is written to disk
         except sqlite3.Error as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"Database connection error: {str(e)}")
+            conn.rollback()
+            logger.error(f"Database operation error: {str(e)}")
             raise e
-        finally:
-            if conn:
-                conn.close()
+        # We DO NOT close the connection here as it is shared
     
     @staticmethod
     def init_database():

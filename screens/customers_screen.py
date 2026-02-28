@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QHeaderView, QAbstractItemView, QGroupBox,
                                QDialog, QDialogButtonBox, QFormLayout,
                                QMessageBox, QTabWidget, QScrollArea)
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont, QColor
 
 from database.models import User, Customer
@@ -20,10 +20,24 @@ class CustomersScreen(QWidget):
     
     def __init__(self):
         super().__init__()
+        # Ensure UI is built immediately
+        self.init_ui()
+        # Basic state
         self.current_user = None
         self.all_customers = []
-        self.init_ui()
-        self.load_customer_data()
+        # Defer loading and permission checks until UI is fully ready
+        QTimer.singleShot(200, self.initial_load)
+
+    def initial_load(self):
+        # Only now, after 200ms, do we touch the UI
+        try:
+            self.load_customer_data()
+        except Exception:
+            pass
+        try:
+            self.apply_permissions()
+        except Exception:
+            pass
         
     def get_currency_symbol(self): # Added method
         return AppConfig.get_setting("currency_symbol", AppConfig.CURRENCY_SYMBOL)
@@ -44,7 +58,35 @@ class CustomersScreen(QWidget):
     def set_current_user(self, user: User):
         """Set current user and update UI permissions"""
         self.current_user = user
-        self.load_customer_data() # Refresh table to show correct action buttons
+        self.apply_permissions()
+        if user:
+            self.load_customer_data() # Refresh table to show correct action buttons
+
+    def apply_permissions(self):
+        """Strict permission check using the 'NoneType Shield' pattern"""
+        # Safely determine the user's role - default to False if user is None
+        is_admin = False
+        is_sales_rep = False
+        
+        if self.current_user:
+            is_admin = (self.current_user.role == "admin")
+            is_sales_rep = (self.current_user.role == "sales_rep")
+        
+        # Shield pattern for all potential buttons
+        for btn_name in ['add_customer_btn', 'btn_edit', 'btn_delete', 'btn_export']:
+            btn = getattr(self, btn_name, None)
+            if btn is not None: # This is the ONLY way to be 100% safe
+                try:
+                    if btn_name == 'add_customer_btn':
+                        btn.setVisible(is_admin or is_sales_rep)
+                    else:
+                        btn.setEnabled(is_admin)
+                except Exception:
+                    pass
+
+    def check_permissions(self):
+        """Legacy check - delegating to new strict method"""
+        self.apply_permissions()
     
     def create_main_content(self, main_layout):
         """Create the main content area with summary cards and table"""
@@ -293,6 +335,10 @@ class CustomersScreen(QWidget):
         
         parent_layout.addWidget(table_container)
     
+    def refresh_data(self):
+        """Refresh customer data when global data changes"""
+        self.load_customer_data()
+
     def load_customer_data(self):
         """Load customer data from service"""
         try:
@@ -402,7 +448,7 @@ class CustomersScreen(QWidget):
             actions_layout.addWidget(view_btn)
 
             # Admin only actions
-            is_admin = (self.current_user and self.current_user.role == "admin")
+            is_admin = bool(self.current_user and self.current_user.role == "admin")
 
             edit_btn = QPushButton("✏️ Edit")
             edit_btn.setStyleSheet("""
@@ -461,7 +507,8 @@ class CustomersScreen(QWidget):
             self.display_customers(filtered)
     
     def on_add_customer_clicked(self):
-        if self.current_user and self.current_user.role != "admin":
+        # Allow both admin and sales_rep to add customers
+        if self.current_user and self.current_user.role not in ["admin", "sales_rep"]:
             CustomWarningDialog("Access Denied", "You do not have permission to add customers.", self).exec()
             return
         try:
@@ -523,7 +570,7 @@ class CustomersScreen(QWidget):
 
 
 class CustomerHistoryDialog(QDialog):
-    \"\"\"Redesigned Customer View with 3 Tabs: Sales, Credit, Payment History\"\"\"
+    """Redesigned Customer View with 3 Tabs: Sales, Credit, Payment History"""
     
     def __init__(self, parent=None, customer_data=None, current_user=None):
         super().__init__(parent)
@@ -568,7 +615,7 @@ class CustomerHistoryDialog(QDialog):
         # Pay Debt Button
         self.pay_debt_btn = QPushButton("Pay Debt")
         self.pay_debt_btn.setCursor(Qt.PointingHandCursor)
-        self.pay_debt_btn.setStyleSheet(\"\"\"
+        self.pay_debt_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
                 color: white;
@@ -579,7 +626,7 @@ class CustomerHistoryDialog(QDialog):
             }
             QPushButton:hover { background-color: #388E3C; }
             QPushButton:disabled { background-color: #BDBDBD; color: #757575; }
-        \"\"\")
+        """)
         self.pay_debt_btn.clicked.connect(self.on_pay_debt_clicked)
         
         # RBAC Check for Pay Debt
@@ -594,11 +641,11 @@ class CustomerHistoryDialog(QDialog):
         
         # Tabs
         self.tabs = QTabWidget()
-        self.tabs.setStyleSheet(\"\"\"
+        self.tabs.setStyleSheet("""
             QTabWidget::pane { border: 1px solid #E0E0E0; background: white; border-radius: 8px; }
             QTabBar::tab { background: #F5F5F5; padding: 10px 20px; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px; }
             QTabBar::tab:selected { background: white; color: #1976D2; font-weight: bold; border-bottom: 2px solid #1976D2; }
-        \"\"\")
+        """)
         
         self.sales_tab = self.create_sales_history_tab()
         self.credit_tab = self.create_credit_history_tab()
@@ -617,7 +664,7 @@ class CustomerHistoryDialog(QDialog):
         self.close_btn = QPushButton("Close")
         self.close_btn.setCursor(Qt.PointingHandCursor)
         self.close_btn.setFixedSize(100, 40)
-        self.close_btn.setStyleSheet(\"\"\"
+        self.close_btn.setStyleSheet("""
             QPushButton {
                 background-color: #757575;
                 color: white;
@@ -627,7 +674,7 @@ class CustomerHistoryDialog(QDialog):
                 font-size: 14px;
             }
             QPushButton:hover { background-color: #616161; }
-        \"\"\")
+        """)
         self.close_btn.clicked.connect(self.reject)
         
         close_btn_layout.addWidget(self.close_btn)
@@ -834,4 +881,3 @@ class CustomerHistoryDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load customer history: {str(e)}")
             print(f"Error loading customer history: {e}")
-"""
