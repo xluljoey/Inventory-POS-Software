@@ -374,14 +374,10 @@ class DashboardScreen(QWidget):
         self.standard_inventory_card.setVisible(True)
         
         # Keep Manage Stock button admin-only as it's a destructive/critical action
-        is_admin = (user.role == "admin")
         if hasattr(self, 'manage_stock_btn'):
+            is_admin = (user.role == "admin")
             self.manage_stock_btn.setVisible(is_admin)
         
-        # Hide Customers quick action for non-admins
-        if hasattr(self, 'customers_btn'):
-            self.customers_btn.setVisible(is_admin)
-
         self.update_dashboard()
 
     def set_main_window(self, main_window):

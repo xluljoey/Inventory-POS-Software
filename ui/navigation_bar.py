@@ -181,16 +181,20 @@ class MainNavigationBar(QFrame):
         """
         # Load settings dynamically from AppConfig (which reads from config.json or database)
         show_reports_to_sales_rep = AppConfig.get_setting("show_reports_to_sales_rep", "0") == "1"
-        
+        show_inventory_to_sales_rep = AppConfig.get_setting("show_inventory_to_sales_rep", "0") == "1"
+        show_customers_to_sales_rep = AppConfig.get_setting("show_customers_to_sales_rep", "0") == "1"
+
         for btn in self.buttons:
             if role == "sales_rep":
                 if btn.btn_id == 4: # Reports tab
                     btn.setVisible(show_reports_to_sales_rep)
-                elif btn.btn_id in [1, 3]: # Inventory and Customers
-                    btn.setVisible(True) # Always visible for sales_rep
+                elif btn.btn_id == 1: # Inventory tab
+                    btn.setVisible(show_inventory_to_sales_rep)
+                elif btn.btn_id == 3: # Customers tab
+                    btn.setVisible(show_customers_to_sales_rep)
                 else:
-                    btn.setVisible(True) # Other buttons also visible
+                    btn.setVisible(True) # Other buttons (Dashboard, Sales) are always visible for sales_rep
             else: # Admin role - all buttons are visible
                 btn.setVisible(True)
 
-        logger.info(f"Navigation buttons configured for role: {role}. Reports visible to Sales Rep: {show_reports_to_sales_rep}")
+        logger.info(f"Navigation buttons configured for role: {role}. Reports visible: {show_reports_to_sales_rep}, Inventory visible: {show_inventory_to_sales_rep}, Customers visible: {show_customers_to_sales_rep}")
