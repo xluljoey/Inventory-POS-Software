@@ -19,13 +19,19 @@ class AppConfig:
         path = os.path.join(base_path, relative_path)
         return path if os.path.exists(path) else None
 
-    # Define base directory for persistent data (user-specific and OS-aware)
-    if platform.system() == "Windows":
-        _base_dir = Path(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))) / "InventoryApp"
-    else:
-        _base_dir = Path.home() / ".config" / "InventoryApp"
-    
+    @staticmethod
+    def get_app_data_dir():
+        """Get the appropriate app data directory for the platform."""
+        if sys.platform == "win32":
+            return os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'InventoryApp')
+        else:
+            # Standard Linux config path (hidden folder in home) as requested
+            return os.path.expanduser('~/.inventoryapp')
+
+    # Define base directory for persistent data
+    _base_dir = Path(get_app_data_dir.__func__())
     _base_dir.mkdir(parents=True, exist_ok=True)
+
 
     # Internal cache for configuration settings from config.json
     _config_data = {}

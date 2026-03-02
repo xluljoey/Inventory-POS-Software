@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 import json
 
-def format_currency(amount: float, currency_symbol: str = "GHµ") -> str:
+def format_currency(amount: float, currency_symbol: str = "GHï¿½") -> str:
     """Format a number as currency"""
     return f"{currency_symbol}{amount:,.2f}"
 
@@ -63,18 +63,9 @@ def is_file_older_than(file_path: str, days: int) -> bool:
     return (datetime.now() - file_date).days > days
 
 def get_app_data_dir() -> str:
-    """Get the appropriate app data directory for the platform"""
-    if platform.system() == "Windows":
-        appdata = os.getenv('APPDATA')
-        if appdata:
-            return os.path.join(appdata, "InventoryManagement")
-    else:
-        # Use ~/.local/share on Linux
-        home = os.path.expanduser("~")
-        return os.path.join(home, ".local", "share", "InventoryManagement")
-    
-    # Fallback to current directory if platform-specific directories fail
-    return os.path.join(os.getcwd(), "data")
+    """Get the appropriate app data directory for the platform."""
+    from config.app_config import AppConfig
+    return AppConfig.get_app_data_dir()
 
 def create_backup_filename(prefix: str = "backup", extension: str = "db") -> str:
     """Create a timestamped backup filename"""
