@@ -3,8 +3,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QTableWidgetItem, QLineEdit, QComboBox, 
                                QHeaderView, QAbstractItemView, QGroupBox,
                                QDialog, QDialogButtonBox, QFormLayout,
-                               QMessageBox, QTabWidget, QScrollArea)
-from PySide6.QtCore import Qt, QSize, QTimer
+                               QMessageBox, QTabWidget, QScrollArea, QCompleter)
+from PySide6.QtCore import Qt, QSize, QTimer, QStringListModel
 from PySide6.QtGui import QFont, QColor
 
 from database.models import User, Customer
@@ -145,6 +145,13 @@ class CustomersScreen(QWidget):
             }
         """)
         self.search_input.textChanged.connect(self.on_search_changed)
+        
+        # Initialize Completer
+        self.completer = QCompleter()
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchContains)
+        self.search_input.setCompleter(self.completer)
+        
         search_layout.addWidget(self.search_input)
         
         header_layout.addWidget(search_container)
@@ -346,9 +353,22 @@ class CustomersScreen(QWidget):
             self.all_customers = customers_data
             self.display_customers(self.all_customers)
             self.update_summary_cards()
+            self.update_completer()
         except Exception as e:
             dialog = CustomErrorDialog("Error", f"Failed to load customer data: {str(e)}", self)
             dialog.exec()
+    
+    def update_completer(self):
+        """Update the search completer with current customer names and phones"""
+        search_list = []
+        for c in self.all_customers:
+            if c.get("name"):
+                search_list.append(c["name"])
+            if c.get("phone"):
+                search_list.append(c["phone"])
+        
+        model = QStringListModel(search_list)
+        self.completer.setModel(model)
     
     def update_summary_cards(self):
         """Update summary cards with current data, ensuring robustness against empty data."""

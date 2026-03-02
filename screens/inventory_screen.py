@@ -3,8 +3,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QTableWidgetItem, QLineEdit, QComboBox, 
                                QHeaderView, QAbstractItemView, QSpinBox, 
                                QDoubleSpinBox, QMessageBox, QDialog, 
-                               QDialogButtonBox, QFormLayout, QScrollArea)
-from PySide6.QtCore import Qt, QSize, QTimer
+                               QDialogButtonBox, QFormLayout, QScrollArea, QCompleter)
+from PySide6.QtCore import Qt, QSize, QTimer, QStringListModel
 from PySide6.QtGui import QFont, QPixmap, QPainter, QColor
 
 from database.models import User, Product
@@ -131,6 +131,13 @@ class InventoryScreen(QWidget):
             }
         """)
         self.search_input.textChanged.connect(self.on_search_changed)
+        
+        # Initialize Completer
+        self.completer = QCompleter()
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchContains)
+        self.search_input.setCompleter(self.completer)
+        
         search_layout.addWidget(self.search_input)
         
         main_layout.addWidget(search_container)
@@ -259,6 +266,7 @@ class InventoryScreen(QWidget):
             products_data = InventoryService.get_all_products()
             self.all_products = products_data
             self.display_products(self.all_products)
+            self.update_completer()
 
             # SPRINT 4: Toggle empty state view
             if not products_data:
@@ -269,6 +277,18 @@ class InventoryScreen(QWidget):
         except Exception as e:
             CustomErrorDialog("Error", f"Failed to load inventory data: {str(e)}", self).exec()
             self.table_stack.setCurrentWidget(self.empty_state_widget) # Show empty state on error too
+
+    def update_completer(self):
+        """Update the search completer with current product names and SKUs"""
+        search_list = []
+        for p in self.all_products:
+            if p.get("name"):
+                search_list.append(p["name"])
+            if p.get("sku"):
+                search_list.append(p["sku"])
+        
+        model = QStringListModel(search_list)
+        self.completer.setModel(model)
 
     
     def display_products(self, products):

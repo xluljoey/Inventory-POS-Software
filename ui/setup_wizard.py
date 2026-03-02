@@ -103,7 +103,7 @@ class CloudLinkPage(QWizardPage):
 class SetupWizard(QWizard):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Initial System Configuration")
+        self.setWindowTitle("Inventory System Setup - Developer: Joachim Korang Amponsah")
         self.setFixedSize(600, 450)
         
         self.addPage(WelcomePage())
@@ -124,6 +124,9 @@ class SetupWizard(QWizard):
             password = self.field("admin_pass")
             
             # 2. Database Atomic Update
+            from config.app_config import AppConfig
+            AppConfig.set_setting("business_name", store_name)
+            
             with DatabaseService.get_connection() as conn:
                 # Update Business Settings
                 conn.execute("UPDATE settings SET value=? WHERE key_name='business_name'", (store_name,))

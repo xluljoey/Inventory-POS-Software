@@ -5,333 +5,227 @@ Using PySide6 QtWidgets for the UI (stable alternative to QML)
 """
 
 import os, sys
-import traceback # Added for exception_hook
-from PySide6.QtCore import Qt, QTimer # QTimer added
-from PySide6.QtGui import QGuiApplication
-os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-
+import traceback
+from PySide6.QtCore import Qt, QTimer, Signal, QSize, QFile, QTextStream
+from PySide6.QtGui import QGuiApplication, QIcon, QPixmap
 from PySide6.QtWidgets import (QApplication, QMainWindow, QStackedWidget, 
-                               QVBoxLayout, QWidget, QHBoxLayout, QSizePolicy, QMessageBox)
-from PySide6.QtCore import Qt, QFile, QTextStream, QSize, Signal
-from PySide6.QtGui import QIcon, QPixmap
+                               QVBoxLayout, QWidget, QHBoxLayout, QSizePolicy, QMessageBox, QLabel)
 
-# --- GLOBAL EXCEPTION HOOK ---
-from utils.logger import logger, exception_hook
-sys.excepthook = exception_hook
-# --- END GLOBAL EXCEPTION HOOK ---
+os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 
-# Ensure logger is configured before any other modules might log
-logger.info("Application starting up...")
-
-
-# from core import config # No longer needed
-from utils.cloud_sync import SyncManager
-
-from config.database_config import DatabaseConfig
-from services.auth_service import AuthService
-from database.models import User
-from config.app_config import AppConfig # Imported AppConfig for settings
-
-
-# SPRINT FIX: Import all major services at top-level to prevent circular import issues
-from services.sales_service import SalesService
-from services.customer_service import CustomerService
-from services.inventory_service import InventoryService
-
-
-# Import screen modules
-from screens.login_screen import LoginScreen
-from screens.dashboard_screen import DashboardScreen
-from screens.inventory_screen import InventoryScreen
-from screens.sales_screen import SalesScreen
-from screens.customers_screen import CustomersScreen
-from screens.reports_screen import ReportsScreen
-from screens.settings_screen import SettingsScreen
-
-# Import Custom Navigation Bar
-from ui.navigation_bar import MainNavigationBar
-from ui.animated_stacked_widget import AnimatedStackedWidget
-
+# Global logger placeholder to be initialized after QApplication
+logger = None
 
 class MainWindow(QMainWindow):
     """Main application window with navigation and screen management"""
     data_changed = Signal()
     
     def __init__(self):
-        logger.info("MainWindow.__init__ started")
         super().__init__()
+        if logger: logger.info("MainWindow initializing...")
         self.current_user = None
-        self.sync_manager = None # For auto-backup
-        self.backup_timer = None # For auto-backup
-        logger.info("Calling init_ui...")
-        self.init_ui()
-        logger.info("Calling load_styles...")
-        self.load_styles()
-        logger.info("MainWindow.__init__ finished")
+        self.sync_manager = None 
+        self.backup_timer = None 
+        self.screens = {} # PERSONA REQUEST: Use screens dictionary
         
+        self.init_ui()
+        self.load_styles()
+        self.update_branding_title()
+        
+        # Start on Login Screen (Hidden Header)
+        self.show_login_screen()
+        
+        if logger: logger.info("MainWindow initialized")
+        
+    def update_branding_title(self):
+        """Set window title based on config store name"""
+        from config.app_config import AppConfig
+        store_name = AppConfig.get_setting("business_name", "Inventory Management System")
+        self.setWindowTitle(f"{store_name} - Developed by Joachim Korang Amponsah (Xluljoey)")
+
     def init_ui(self):
         """Initialize the main UI components"""
-        logger.debug("init_ui started")
-        self.setWindowTitle("Inventory Management System")
-        self.setGeometry(100, 100, 1400, 900)
+        if logger: logger.debug("init_ui started")
+        from utils.resource_path import get_resource_path
         
-        # Enable window maximization and proper sizing
+        # FIX WINDOW ICON CRASH: Wrap setWindowIcon in a try/except block
+        try:
+            icon_path = get_resource_path(os.path.join("assets", "app_icon.ico"))
+            if icon_path:
+                self.setWindowIcon(QIcon(icon_path))
+        except Exception as e:
+            if logger: logger.warning(f"Failed to set window icon: {e}")
+
+        self.setGeometry(100, 100, 1400, 900)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
-        self.setMinimumSize(1200, 800)  # Set minimum size
+        self.setMinimumSize(1200, 800)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # Create central widget and layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        
         self.main_layout = QVBoxLayout(central_widget)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
         
-        # Header container for Nav Bar and Profile
+        # Header Container
         self.header_container = QWidget()
         self.header_container.setFixedHeight(85)
         self.header_layout = QHBoxLayout(self.header_container)
         self.header_layout.setContentsMargins(20, 0, 20, 0)
         self.header_layout.setSpacing(0)
         
-        # Modern Capsule Navigation Bar
-        logger.debug("Creating Navigation Bar...")
+        from ui.navigation_bar import MainNavigationBar
         self.nav_bar = MainNavigationBar(self)
         self.nav_bar.nav_changed.connect(self.on_nav_changed)
-        # Logout now handled by profile widget, but keeping signal for fallback
-        self.nav_bar.logout_requested.connect(self.logout)
+        self.header_layout.addWidget(self.nav_bar, 1)
         
-        self.header_layout.addWidget(self.nav_bar, 1) # Nav bar takes stretch
-        
-        # User Profile Dropdown (Top Right)
         from ui.user_profile_widget import UserProfileWidget
-        self.profile_widget = UserProfileWidget(User()) # Dummy user initially
+        from database.models import User
+        self.profile_widget = UserProfileWidget(User())
         self.profile_widget.logout_requested.connect(self.logout)
         self.profile_widget.settings_requested.connect(self.show_settings)
         self.header_layout.addWidget(self.profile_widget)
         
         self.main_layout.addWidget(self.header_container)
-        self.header_container.setVisible(False)
+        self.header_container.setVisible(False) # Hidden initially for login
         
-        # Create stacked widget for screen navigation
+        from ui.animated_stacked_widget import AnimatedStackedWidget
         self.stacked_widget = AnimatedStackedWidget()
         self.main_layout.addWidget(self.stacked_widget)
         
-        # Initialize screens
-        logger.debug("Initializing screens...")
         self.init_screens()
-        
-        # Start with login screen
-        logger.debug("Showing login screen...")
-        self.show_login_screen()
-        logger.debug("init_ui finished")
+        if logger: logger.debug("init_ui finished")
         
     def load_styles(self):
         """Load QSS styling using the resource path helper."""
         from utils.resource_path import get_resource_path
         qss_file_path = get_resource_path("styles.qss")
-        qss_file = QFile(qss_file_path)
-        if qss_file.exists():
-            qss_file.open(QFile.ReadOnly | QFile.Text)
-            stylesheet = QTextStream(qss_file).readAll()
-            self.setStyleSheet(stylesheet)
-        else:
-            logger.error(f"Could not find stylesheet at: {qss_file_path}")
+        if qss_file_path:
+            qss_file = QFile(qss_file_path)
+            if qss_file.exists():
+                qss_file.open(QFile.ReadOnly | QFile.Text)
+                stylesheet = QTextStream(qss_file).readAll()
+                self.setStyleSheet(stylesheet)
     
     def init_screens(self):
         """Initialize all application screens"""
-        # Create screens defensively so a failure in one doesn't crash startup
+        from screens.login_screen import LoginScreen
+        from screens.dashboard_screen import DashboardScreen
+        from screens.inventory_screen import InventoryScreen
+        from screens.sales_screen import SalesScreen
+        from screens.customers_screen import CustomersScreen
+        from screens.reports_screen import ReportsScreen
+        from screens.settings_screen import SettingsScreen
+
         def _safe_add(widget_name, constructor, connect_fn=None, post_init=None):
             try:
                 widget = constructor()
-                if connect_fn:
-                    try:
-                        connect_fn(widget)
-                    except Exception:
-                        logger.exception(f"Failed to connect signals for {widget_name}")
-                if post_init:
-                    try:
-                        post_init(widget)
-                    except Exception:
-                        logger.exception(f"Post-init failed for {widget_name}")
+                if connect_fn: connect_fn(widget)
+                if post_init: post_init(widget)
                 self.stacked_widget.addWidget(widget)
-                setattr(self, widget_name, widget)
+                self.screens[widget_name] = widget # REGISTER IN DICTIONARY
+                setattr(self, widget_name, widget) # BACKWARD COMPATIBILITY
+                return widget
             except Exception:
-                logger.exception(f"Failed to initialize {widget_name}; adding fallback placeholder")
-                # Fallback placeholder to keep indices stable
+                if logger: logger.exception(f"CRITICAL: Failed to initialize {widget_name}")
+                # Use a proper QWidget fallback
                 placeholder = QWidget()
                 layout = QVBoxLayout(placeholder)
-                label = QLabel(f"{widget_name} failed to initialize. See logs for details.")
-                layout.addWidget(label)
+                layout.addWidget(QLabel(f"{widget_name} failed to initialize. Check logs."))
                 self.stacked_widget.addWidget(placeholder)
+                self.screens[widget_name] = placeholder
                 setattr(self, widget_name, placeholder)
+                return placeholder
 
-        # Use the helper to add each screen
-        _safe_add('login_screen', LoginScreen, connect_fn=lambda w: w.login_successful.connect(self.on_login_success))
+        # 1. Login Screen (Page 0)
+        _safe_add('login_screen', LoginScreen, 
+                  connect_fn=lambda w: w.login_successful.connect(self.on_login_success))
+        
+        # 2. Functional Screens
         _safe_add('dashboard_screen', DashboardScreen, post_init=lambda w: w.set_main_window(self))
         _safe_add('inventory_screen', InventoryScreen)
         _safe_add('sales_screen', SalesScreen, connect_fn=lambda w: w.sale_completed.connect(self.on_sale_completed))
         _safe_add('customers_screen', CustomersScreen)
         _safe_add('reports_screen', ReportsScreen)
         _safe_add('settings_screen', SettingsScreen)
-
-        # Connect global signal to master refresh function
+        
         self.data_changed.connect(self.global_refresh)
 
     def global_refresh(self):
-        """Force immediate UI refresh across all tabs to sync with database"""
-        logger.info("Global UI synchronization triggered.")
         try:
-            self.dashboard_screen.refresh_data()
-            self.inventory_screen.refresh_data()
-            self.customers_screen.refresh_data()
-            self.reports_screen.refresh_data()
-            print("UI Synchronized with Database.")
+            if 'dashboard_screen' in self.screens: self.dashboard_screen.refresh_data()
+            if 'inventory_screen' in self.screens: self.inventory_screen.refresh_data()
+            if 'customers_screen' in self.screens: self.customers_screen.refresh_data()
+            if 'reports_screen' in self.screens: self.reports_screen.refresh_data()
         except Exception:
-            logger.exception("Failed during global UI refresh")
+            if logger: logger.exception("Failed during global UI refresh")
     
     def show_login_screen(self):
-        """Show the login screen and hide navigation"""
-        if hasattr(self, 'header_container'):
-            self.header_container.setVisible(False)
-        self.login_screen.clear_fields()
+        """Reset UI to Login State"""
+        self.header_container.setVisible(False)
+        if 'login_screen' in self.screens and hasattr(self.login_screen, 'clear_fields'):
+            self.login_screen.clear_fields()
         self.stacked_widget.setCurrentWidget(self.login_screen)
-    
-    def on_login_success(self, user: User):
-        """Handle successful login"""
+        self.current_user = None
+
+    def on_login_success(self, user):
+        """Switch to Dashboard upon successful login"""
         try:
-            logger.debug(f"Login successful for {user.username} (Role: {user.role})")
+            if logger: logger.info(f"Login success for {user.username}")
             self.current_user = user
-
-            # Update profile widget
-            if hasattr(self, 'profile_widget'):
+            self.update_branding_title()
+            
+            # Show Header
+            self.header_container.setVisible(True)
+            if hasattr(self, 'profile_widget'): self.profile_widget.update_user_info(user)
+            self.nav_bar.set_role(user.role)
+            
+            # PERSONA REQUEST: Fix the 'Set User' Crash
+            for screen_name, screen in self.screens.items():
                 try:
-                    self.profile_widget.update_user_info(user)
+                    if hasattr(screen, 'set_current_user'):
+                        screen.set_current_user(user)
+                    elif screen_name == "sales_screen":
+                        screen.current_user = user
                 except Exception:
-                    logger.exception("Failed to update profile widget")
+                    if logger: logger.error(f"Failed to set user for screen: {screen_name}")
 
-            # RBAC: Configure navigation bar
-            try:
-                self.nav_bar.set_role(user.role)
-            except Exception:
-                logger.exception("Failed to set navigation role")
+            # Move to Dashboard
+            self.show_dashboard()
+            
+            # Post-login background tasks
+            QTimer.singleShot(100, self.start_background_services)
+            
+            if user.role == "admin": self._check_backup_reminder()
+        except Exception:
+            if logger: logger.exception("Error during on_login_success")
 
-            if hasattr(self, 'header_container'):
-                self.header_container.setVisible(True)
-
-            # Update user info in screens with defensive error handling
-            try:
-                logger.debug("Updating user info across screens...")
-                self.dashboard_screen.set_current_user(user)
-                self.inventory_screen.set_current_user(user)
-                self.sales_screen.current_user = user
-                self.customers_screen.set_current_user(user)
-                self.reports_screen.set_current_user(user)
-                self.settings_screen.set_current_user(user)
-            except Exception:
-                logger.exception("Failed to update one or more screens after login")
-
-            # Force UI update to ensure all role-based elements are properly visible
-            try:
-                self.inventory_screen.update()
-            except Exception:
-                logger.exception("Inventory screen update failed")
-
-            # Show dashboard by default
-            try:
-                self.show_dashboard()
-            except Exception:
-                logger.exception("Failed to show dashboard after login")
-
-            # 4. BACKUP REMINDER (Startup Logic) — run defensively
-            if user.role == "admin":
-                try:
-                    self._check_backup_reminder()
-                except Exception:
-                    logger.exception("Backup reminder check failed")
-
-        except Exception: # Catch internal exception of this method
-            logger.exception("Unexpected error during on_login_success")
+    def start_background_services(self):
+        """Move heavy services to background threads if needed"""
+        from config.app_config import AppConfig
+        if AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1":
+            if logger: logger.info("Starting background cloud sync services...")
+            from utils.cloud_sync import SyncManager
+            if self.sync_manager is None:
+                self.sync_manager = SyncManager() 
+            
+            if self.backup_timer is None:
+                self.backup_timer = QTimer(self)
+                if hasattr(self.sync_manager, "start_sync"):
+                    self.backup_timer.timeout.connect(self.sync_manager.start_sync)
+                    self.backup_timer.start(15 * 60 * 1000) # 15 mins
 
     def _check_backup_reminder(self):
-        """Check if a backup reminder is needed (> 7 days since last sync)."""
-        from database.database import DatabaseService
-        from datetime import datetime, timedelta
-
-        def _parse_last_sync(val):
-            """Try several parsing strategies for stored last sync values."""
-            if not val:
-                return None
-            # If it's already a datetime
-            if isinstance(val, datetime):
-                return val
-            # If a timedelta was stored accidentally, interpret as offset from now
-            from datetime import timedelta as _td
-            if isinstance(val, _td):
-                try:
-                    return datetime.now() - val
-                except Exception:
-                    return None
-
-            # Strings: try common formats
-            if isinstance(val, str):
-                s = val.strip()
-                if s.lower() == "never":
-                    return None
-                # Try explicit format first
-                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
-                    try:
-                        return datetime.strptime(s, fmt)
-                    except Exception:
-                        continue
-                # Try ISO parser fallback
-                try:
-                    return datetime.fromisoformat(s)
-                except Exception:
-                    pass
-                # Try numeric epoch
-                try:
-                    ts = float(s)
-                    return datetime.fromtimestamp(ts)
-                except Exception:
-                    pass
-
-            # Could not parse
-            return None
-
-        sync_setting = DatabaseService.get_setting("last_cloud_sync")
-        show_reminder = False
-
-        if not sync_setting or sync_setting.value is None:
-            show_reminder = True
-        else:
-            try:
-                last_sync = _parse_last_sync(sync_setting.value)
-                if not last_sync:
-                    show_reminder = True
-                else:
-                    try:
-                        if datetime.now() - last_sync > timedelta(days=7):
-                            show_reminder = True
-                    except Exception:
-                        # Defensive fallback if subtraction fails for any reason
-                        show_reminder = True
-            except Exception:
-                show_reminder = True
-
-        if show_reminder:
-            try:
-                from ui.custom_dialog import CustomWarningDialog
-                msg = "SAFETY REMINDER: It has been more than 7 days since your last cloud backup. Please sync to Google Drive to ensure your data is safe."
-                dialog = CustomWarningDialog("Backup Reminder", msg, self)
+        try:
+            from database.database import DatabaseService
+            from ui.custom_dialog import CustomWarningDialog
+            sync_setting = DatabaseService.get_setting("last_cloud_sync")
+            if not sync_setting or not sync_setting.value:
+                dialog = CustomWarningDialog("Backup Reminder", "SAFETY REMINDER: Please sync to Google Drive.", self)
                 dialog.exec()
-            except Exception:
-                logger.exception("Failed to show backup reminder dialog")
+        except Exception: pass
     
     def on_nav_changed(self, btn_id):
-        """Handle navigation bar button clicks"""
         if btn_id == 0: self.show_dashboard()
         elif btn_id == 1: self.show_inventory()
         elif btn_id == 2: self.show_sales()
@@ -340,116 +234,118 @@ class MainWindow(QMainWindow):
         elif btn_id == 5: self.show_settings()
     
     def show_dashboard(self):
-        self.dashboard_screen.update_dashboard()
+        if hasattr(self.dashboard_screen, 'update_dashboard'):
+            self.dashboard_screen.update_dashboard()
         self.stacked_widget.setCurrentWidget(self.dashboard_screen)
         self.nav_bar.set_active_btn(0)
     
     def show_inventory(self):
-        self.inventory_screen.load_inventory_data()
+        if hasattr(self.inventory_screen, 'load_inventory_data'):
+            self.inventory_screen.load_inventory_data()
         self.stacked_widget.setCurrentWidget(self.inventory_screen)
         self.nav_bar.set_active_btn(1)
     
     def show_sales(self):
-        self.sales_screen.load_product_data()
-        self.sales_screen.load_customers()
+        if hasattr(self.sales_screen, 'load_product_data'):
+            self.sales_screen.load_product_data()
+            self.sales_screen.load_customers()
         self.stacked_widget.setCurrentWidget(self.sales_screen)
         self.nav_bar.set_active_btn(2)
     
     def show_customers(self):
-        self.customers_screen.load_customer_data()
+        if hasattr(self.customers_screen, 'load_customer_data'):
+            self.customers_screen.load_customer_data()
         self.stacked_widget.setCurrentWidget(self.customers_screen)
         self.nav_bar.set_active_btn(3)
     
     def show_reports(self):
-        self.reports_screen.load_report_data()
+        if hasattr(self.reports_screen, 'load_report_data'):
+            self.reports_screen.load_report_data()
         self.stacked_widget.setCurrentWidget(self.reports_screen)
         self.nav_bar.set_active_btn(4)
     
     def show_settings(self):
-        self.settings_screen.load_all_settings_data()
+        # DEFENSIVE: Check if screen is valid instance
+        if hasattr(self.settings_screen, 'load_all_settings_data'):
+            try:
+                self.settings_screen.load_all_settings_data()
+            except Exception:
+                if logger: logger.error("Failed to load settings data")
+        
         self.stacked_widget.setCurrentWidget(self.settings_screen)
         self.nav_bar.set_active_btn(5)
     
     def logout(self):
-        """Handle user logout"""
-        self.current_user = None
+        """Zero-Lag Logout: Just switch back to Login Screen"""
+        if logger: logger.info("User requested logout")
         self.show_login_screen()
     
     def on_sale_completed(self):
-        """Handle sale completion - emit signal to refresh all screens"""
         self.data_changed.emit()
 
+    def closeEvent(self, event):
+        """Show confirmation dialog before exiting"""
+        from utils.resource_path import get_resource_path
+        
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle('Exit Confirmation')
+        msg_box.setText("Are you sure you want to exit the application?")
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+        msg_box.setIcon(QMessageBox.Question)
+        
+        # Apply icon to message box
+        icon_path = get_resource_path(os.path.join("assets", "app_icon.ico"))
+        if icon_path:
+            msg_box.setWindowIcon(QIcon(icon_path))
+            
+        reply = msg_box.exec()
+        
+        if reply == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
 def main():
     """Main application entry point"""
-    logger.info("Starting main application...")
+    app = QApplication(sys.argv)
+    app.setApplicationName("Inventory Management System")
+    app.setApplicationVersion("1.0")
+    app.setStyle("Fusion")
+
     try:
-        logger.info("Initializing database...")
+        global logger
+        from utils.logger import logger, exception_hook
+        sys.excepthook = exception_hook
+        
+        # CRITICAL: Initialize database schema and default users BEFORE any other logic
         from database.init_db import init_database_with_default_admin
         init_database_with_default_admin()
         
-        # Create test sales data if database is empty
-        logger.info("Checking for test data...")
-        from database.database import DatabaseService
-        from datetime import datetime
-        from config.app_config import AppConfig # Imported for auto-backup setting
+        from config.app_config import AppConfig
         
-        # --- FIRST-RUN SETUP CHECK ---
-        business_setting = DatabaseService.get_setting("business_name")
-        is_first_run = not business_setting or business_setting.value == "Inventory Management System" or not business_setting.value.strip()
-        
-        logger.info("Creating QApplication...")
-        app = QApplication(sys.argv)
-        app.setStyle("Fusion")
-        app.setPalette(app.style().standardPalette())
-        
-        if is_first_run:
+        # 1. SETUP WIZARD (AppData Check for Persistence)
+        config_exists = AppConfig.load_config()
+        if not config_exists:
+            if logger: logger.info("First run detected: Showing Setup Wizard")
             from ui.setup_wizard import SetupWizard
             wizard = SetupWizard()
             if wizard.exec() != SetupWizard.Accepted:
-                logger.info("Setup cancelled. Exiting.")
-                sys.exit(0)
-            else:
-                # Refresh status
-                business_setting = DatabaseService.get_setting("business_name")
-                if not business_setting or not business_setting.value.strip():
-                    logger.error("Setup wizard accepted but no business name found. Emergency exit.")
-                    sys.exit(1)
+                return 0
         
-        app.setApplicationName("Inventory Management System")
-        app.setApplicationVersion("1.0")
-        
-        logger.info("Creating MainWindow...")
+        # 2. MAIN WINDOW (One Window to Rule Them All)
         main_window = MainWindow()
-        
-        # Auto Cloud Backup: Initialize and start QTimer if enabled
-        auto_backup_enabled = AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1"
-        if auto_backup_enabled:
-            logger.info("Auto Cloud Backup is enabled. Initializing sync manager and timer.")
-            main_window.sync_manager = SyncManager() # Instantiate SyncManager
-            main_window.backup_timer = QTimer(main_window) # Create QTimer
-            
-            # Connect timer to sync manager's start_sync method
-            main_window.backup_timer.timeout.connect(main_window.sync_manager.start_sync)
-            
-            # Start timer with a 15-minute interval (900,000 ms)
-            main_window.backup_timer.start(15 * 60 * 1000)
-            logger.info(f"Auto Cloud Backup timer started with 15 minute interval.")
-        else:
-            logger.info("Auto Cloud Backup is disabled.")
-
-        logger.info("Showing MainWindow...")
         main_window.show()
-        logger.info("Entering main loop...")
+        main_window.raise_()
+        main_window.activateWindow()
         
-        # 2. CRASH CAPTURE: Wrap main loop
-        # Removed redundant try-except as global exception_hook handles this
-        sys.exit(app.exec())
+        return app.exec()
             
-    except Exception: # Catch any startup errors not caught by QApplication.exec()
-        logger.exception("Failed to start application")
-        sys.exit(1)
-
+    except Exception as e:
+        error_details = traceback.format_exc()
+        if logger: logger.error(f"Startup error: {error_details}")
+        QMessageBox.critical(None, "Startup Error", f"The application failed to start:\n\n{str(e)}\n\nCheck logs for details.")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

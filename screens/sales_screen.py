@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                                QLabel, QPushButton, QFrame, QTableWidget, 
                                QTableWidgetItem, QLineEdit, QComboBox, 
                                QHeaderView, QAbstractItemView, QMessageBox, QCompleter)
-from PySide6.QtCore import Qt, Signal, QSize, QTimer
+from PySide6.QtCore import Qt, Signal, QSize, QTimer, QStringListModel
 from PySide6.QtGui import QFont, QColor
 
 from database.models import User, Sale, SaleItem
@@ -91,6 +91,13 @@ class SalesScreen(QWidget):
             }
         """)
         self.product_search.textChanged.connect(self.on_product_search_changed)
+        
+        # Initialize Completer
+        self.completer = QCompleter()
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchContains)
+        self.product_search.setCompleter(self.completer)
+        
         search_layout.addWidget(self.product_search)
         left_layout.addWidget(self.search_container)
         
@@ -316,9 +323,22 @@ class SalesScreen(QWidget):
             self.all_products = InventoryService.get_all_products()
             # Display all products initially without filtering
             self.display_products(self.all_products)
+            self.update_completer()
         except Exception as e:
             print(f"Error loading products: {e}")
             QMessageBox.critical(self, "Database Error", f"Failed to load products: {str(e)}")
+
+    def update_completer(self):
+        """Update the search completer with current product names and SKUs"""
+        search_list = []
+        for p in self.all_products:
+            if p.get("name"):
+                search_list.append(p["name"])
+            if p.get("sku"):
+                search_list.append(p["sku"])
+        
+        model = QStringListModel(search_list)
+        self.completer.setModel(model)
 
     def display_products(self, products):
         self.product_table.setRowCount(len(products))

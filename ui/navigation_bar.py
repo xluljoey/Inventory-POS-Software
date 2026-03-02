@@ -152,7 +152,8 @@ class MainNavigationBar(QFrame):
             ("Inventory", "inventory", 1),
             ("Sales", "sales", 2),
             ("Customers", "customers", 3),
-            ("Reports", "reports", 4)
+            ("Reports", "reports", 4),
+            ("Settings", "settings", 5)
         ]
         
         for text, icon_name, btn_id in nav_items:

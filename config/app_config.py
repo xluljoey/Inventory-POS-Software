@@ -1,57 +1,88 @@
-# -*- coding: utf-8 -*-
 import os
 import platform
 import json
+import sys
+import shutil
 from pathlib import Path
 from loguru import logger
 
 class AppConfig:
-    """Application configuration settings, now including config.json management."""
+    """Application configuration settings for production and LAN readiness."""
     
+    @staticmethod
+    def get_resource_path(relative_path):
+        """Get absolute path to resource, works for dev and for PyInstaller."""
+        if hasattr(sys, "_MEIPASS"):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.abspath(".")
+        path = os.path.join(base_path, relative_path)
+        return path if os.path.exists(path) else None
+
     # Define base directory for persistent data (user-specific and OS-aware)
     if platform.system() == "Windows":
-        _base_dir = Path(os.getenv('LOCALAPPDATA')) / "InventoryApp"
+        _base_dir = Path(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))) / "InventoryApp"
     else:
-        # Use ~/.config or ~/.local/share for Linux/macOS
-        _base_dir = Path.home() / ".config" / "InventoryApp" 
-        if not _base_dir.exists(): # Fallback for non-standard systems
-            _base_dir = Path.home() / ".local" / "share" / "InventoryApp"
+        _base_dir = Path.home() / ".config" / "InventoryApp"
     
     _base_dir.mkdir(parents=True, exist_ok=True)
 
-    # Define paths using the base directory
-    DB_PATH = _base_dir / 'inventory_v1.db'
-    CONFIG_PATH = _base_dir / 'config.json'
-
     # Internal cache for configuration settings from config.json
     _config_data = {}
+    CONFIG_PATH = _base_dir / 'config.json'
 
     @classmethod
     def load_config(cls):
-        """Loads configuration from config.json."""
+        """Loads configuration from config.json with production defaults."""
         if cls.CONFIG_PATH.exists():
             try:
                 with open(cls.CONFIG_PATH, 'r', encoding='utf-8') as f:
                     cls._config_data = json.load(f)
                 logger.info(f"Configuration loaded from {cls.CONFIG_PATH}")
-            except json.JSONDecodeError as e:
-                logger.error(f"Error decoding config.json: {e}. Using default/empty config.")
-                cls._config_data = {}
+                return True # Config exists and loaded
             except Exception as e:
-                logger.error(f"Error loading config.json: {e}. Using default/empty config.")
+                logger.error(f"Error loading config.json: {e}")
                 cls._config_data = {}
+                return False
         else:
-            logger.info(f"config.json not found at {cls.CONFIG_PATH}. Creating default.")
-            cls.save_config() # Create an empty config file
-            
-        # Ensure 'database' section exists with default db_host if not present
-        if 'database' not in cls._config_data:
-            cls._config_data['database'] = {}
-        if 'db_host' not in cls._config_data['database']:
-            cls._config_data['database']['db_host'] = 'localhost'
-            cls.save_config() # Save with default db_host
-            logger.info("Default db_host 'localhost' added to config.json.")
+            # File doesn't exist, this is likely a first run
+            cls._config_data = {}
+            logger.info("Config file missing - preparing for first run")
+            return False
 
+    @classmethod
+    def get_db_path(cls):
+        """Dynamic DB Pathing: Returns local AppData path or Network UNC path."""
+        db_mode = cls.get_setting('database.db_mode', 'local')
+        if db_mode == 'network':
+            network_path = cls.get_setting('database.network_path')
+            if network_path:
+                return network_path
+            logger.warning("Network mode enabled but network_path is empty. Falling back to local.")
+        
+        return str(cls._base_dir / 'inventory.db')
+
+    @classmethod
+    def ensure_db_setup(cls):
+        """Ensures database exists in the target path, copying from bundle if needed."""
+        target_path = Path(cls.get_db_path())
+        
+        # If DB exists, do nothing
+        if target_path.exists():
+            return
+            
+        # If local mode, try to copy template from bundle (sys._MEIPASS)
+        if cls.get_setting('database.db_mode', 'local') == 'local':
+            template_path = Path(cls.get_resource_path(os.path.join('database', 'inventory.db')))
+            if template_path.exists():
+                try:
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(template_path, target_path)
+                    logger.info(f"Initialized new database from template: {target_path}")
+                except Exception as e:
+                    logger.error(f"Failed to copy template database: {e}")
+            else:
+                logger.warning(f"Database template not found at {template_path}. Database will be created from scratch.")
 
     @classmethod
     def save_config(cls):
@@ -59,7 +90,6 @@ class AppConfig:
         try:
             with open(cls.CONFIG_PATH, 'w', encoding='utf-8') as f:
                 json.dump(cls._config_data, f, indent=4)
-            logger.info(f"Configuration saved to {cls.CONFIG_PATH}")
         except Exception as e:
             logger.error(f"Error saving config.json: {e}")
 
@@ -67,42 +97,34 @@ class AppConfig:
     def get_setting(cls, key, default=None):
         """Retrieves a setting from the loaded configuration, with fallback."""
         if not cls._config_data:
-            cls.load_config() # Ensure config is loaded on first access
-
-        # Example: to get db_host, use get_setting('database.db_host', 'localhost')
+            cls.load_config()
         keys = key.split('.')
         value = cls._config_data
         for k in keys:
             if isinstance(value, dict) and k in value:
                 value = value[k]
             else:
-                return default # Key not found at this level
+                return default
         return value
 
     @classmethod
     def set_setting(cls, key, value):
         """Sets a configuration setting and marks it for saving."""
         if not cls._config_data:
-            cls.load_config() # Ensure config is loaded on first access
-        
+            cls.load_config()
         keys = key.split('.')
         current_level = cls._config_data
         for i, k in enumerate(keys):
-            if i == len(keys) - 1: # Last key in path
+            if i == len(keys) - 1:
                 current_level[k] = value
             else:
-                if not isinstance(current_level, dict):
-                    logger.error(f"Cannot set setting '{key}': Intermediate key '{k}' is not a dictionary.")
-                    return
-                if k not in current_level:
-                    current_level[k] = {} # Create sub-dictionary if it doesn't exist
+                if k not in current_level or not isinstance(current_level[k], dict):
+                    current_level[k] = {}
                 current_level = current_level[k]
-        cls.save_config() # Save after setting
-        logger.info(f"Setting '{key}' updated to '{value}'.")
+        cls.save_config()
 
-
-    # Static business settings (can be overridden by database settings or config.json)
-    BUSINESS_NAME = "Inventory Management System"
+    # Static business settings
+    BUSINESS_NAME = "Inventory Management System - Joachim Korang Amponsah"
     CURRENCY_SYMBOL = "GH₵"
     TAX_RATE = 0.0
     RECEIPT_HEADER = "Thank you for your purchase!"
@@ -114,18 +136,16 @@ class AppConfig:
     DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     
     @classmethod
-    def get_db_path(cls):
-        """Get the database file path from AppConfig.DB_PATH."""
-        return str(cls.DB_PATH)
-    
-    @classmethod
     def get_config_path(cls):
-        """Get the config.json file path from AppConfig.CONFIG_PATH."""
         return str(cls.CONFIG_PATH)
 
     @classmethod
+    def get_base_dir(cls):
+        """Returns the persistent AppData directory."""
+        return str(cls._base_dir)
+
+    @classmethod
     def get_backup_dir(cls):
-        """Get the backup directory path within the base directory."""
         backup_dir = cls._base_dir / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
         return str(backup_dir)

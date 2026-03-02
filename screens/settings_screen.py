@@ -174,14 +174,26 @@ class SettingsScreen(QWidget):
                 self.nav_buttons[0].setChecked(True)
 
     def load_all_settings_data(self):
-        """Load data for all admin panels."""
-        self._load_category_data()
-        self._load_pos_settings()
-        self._load_inventory_settings()
-        self._load_user_data()
-        self._refresh_bulk_categories()
-        # Load auto-backup setting
-        self._load_backup_settings() # Corrected: this method is now defined below
+        """Load data for all admin panels with per-method error handling."""
+        logger.info("Starting load_all_settings_data...")
+        
+        methods = [
+            (self._load_category_data, "Category Data"),
+            (self._load_pos_settings, "POS Settings"),
+            (self._load_inventory_settings, "Inventory Settings"),
+            (self._load_user_data, "User Data"),
+            (self._refresh_bulk_categories, "Bulk Categories"),
+            (self._load_backup_settings, "Backup Settings")
+        ]
+        
+        for method, name in methods:
+            try:
+                method()
+                logger.debug(f"Successfully loaded: {name}")
+            except Exception as e:
+                logger.error(f"Failed to load {name}: {e}")
+        
+        logger.info("Finished load_all_settings_data.")
 
     def _refresh_bulk_categories(self):
         """Refresh categories in the bulk update dropdown."""
@@ -633,34 +645,70 @@ class SettingsScreen(QWidget):
         logger.info(f"Auto Cloud Backup Toggled: {'Enabled' if checked else 'Disabled'}")
 
     def _update_drive_status(self):
-        """1. UI SYNC: Update status label and button states."""
-        is_linked = self.cloud_service.is_linked()
-        sync_setting = DatabaseService.get_setting("last_cloud_sync")
-        last_sync = sync_setting.value if sync_setting else "Never"
+        """1. UI SYNC: Update status label and button states with extreme defensive checks."""
+        try:
+            # Safe initialization check for cloud_service
+            if not hasattr(self, 'cloud_service') or self.cloud_service is None:
+                self.cloud_service = CloudService()
 
-        if is_linked:
-            email = self.cloud_service.get_user_email() or "Unknown Account"
-            self.cloud_status_label.setText(f"Cloud Status: ✓ Linked: {email} | Last Sync: {last_sync}")
-            self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #16A34A; margin-bottom: 10px;")
-            self.link_drive_btn.setVisible(False)
-            self.unlink_drive_btn.setVisible(self.current_user.role == "admin")
-            self.sync_cloud_btn.setEnabled(True)
-            self.cloud_restore_btn.setEnabled(True)
-            # Load auto backup state
-            auto_backup_enabled = AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1"
-            self.auto_cloud_backup_checkbox.setChecked(auto_backup_enabled)
-            self.auto_cloud_backup_checkbox.setEnabled(True) # Enable if linked
-        else:
-            self.cloud_status_label.setText("Cloud Status: Not Linked")
-            self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 10px;")
-            self.link_drive_btn.setVisible(True)
-            self.link_drive_btn.setText("Link Google Drive")
-            self.link_drive_btn.setStyleSheet("background-color: #1976D2; color: white; font-weight: bold;")
-            self.unlink_drive_btn.setVisible(False)
-            self.sync_cloud_btn.setEnabled(False)
-            self.cloud_restore_btn.setEnabled(False)
-            self.auto_cloud_backup_checkbox.setChecked(False) # Disable if not linked
-            self.auto_cloud_backup_checkbox.setEnabled(False)
+            is_linked = False
+            try:
+                is_linked = self.cloud_service.is_linked()
+            except Exception as e:
+                logger.error(f"Failed to check cloud link status: {e}")
+
+            last_sync = "Never"
+            try:
+                sync_setting = DatabaseService.get_setting("last_cloud_sync")
+                if sync_setting:
+                    last_sync = sync_setting.value
+            except Exception as e:
+                logger.warning(f"Failed to fetch last_cloud_sync from DB: {e}")
+
+            if is_linked:
+                email = "Linked"
+                try:
+                    # get_user_email can be blocking or fail if session expired
+                    email = self.cloud_service.get_user_email() or "Linked Account"
+                except Exception as e:
+                    logger.error(f"Failed to fetch Google email: {e}")
+                    email = "Linked (Verify Connection)"
+                
+                self.cloud_status_label.setText(f"Cloud Status: ✓ {email} | Last Sync: {last_sync}")
+                self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #16A34A; margin-bottom: 10px;")
+                
+                if hasattr(self, 'link_drive_btn'): self.link_drive_btn.setVisible(False)
+                
+                # Role-based visibility for Admin only
+                is_admin = self.current_user and self.current_user.role == "admin"
+                if hasattr(self, 'unlink_drive_btn'): self.unlink_drive_btn.setVisible(is_admin)
+                
+                if hasattr(self, 'sync_cloud_btn'): self.sync_cloud_btn.setEnabled(True)
+                if hasattr(self, 'cloud_restore_btn'): self.cloud_restore_btn.setEnabled(True)
+                
+                # Auto backup toggle
+                if hasattr(self, 'auto_cloud_backup_checkbox'):
+                    auto_enabled = AppConfig.get_setting("auto_cloud_backup_enabled", "0") == "1"
+                    self.auto_cloud_backup_checkbox.setChecked(auto_enabled)
+                    self.auto_cloud_backup_checkbox.setEnabled(True)
+            else:
+                self.cloud_status_label.setText("Cloud Status: Not Linked")
+                self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 10px;")
+                if hasattr(self, 'link_drive_btn'):
+                    self.link_drive_btn.setVisible(True)
+                    self.link_drive_btn.setText("Link Google Drive")
+                
+                if hasattr(self, 'unlink_drive_btn'): self.unlink_drive_btn.setVisible(False)
+                if hasattr(self, 'sync_cloud_btn'): self.sync_cloud_btn.setEnabled(False)
+                if hasattr(self, 'cloud_restore_btn'): self.cloud_restore_btn.setEnabled(False)
+                
+                if hasattr(self, 'auto_cloud_backup_checkbox'):
+                    self.auto_cloud_backup_checkbox.setChecked(False)
+                    self.auto_cloud_backup_checkbox.setEnabled(False)
+        except Exception as e:
+            logger.error(f"FATAL error in SettingsScreen._update_drive_status: {e}")
+            if hasattr(self, 'cloud_status_label'):
+                self.cloud_status_label.setText("Cloud Status: Error checking service")
 
     def _unlink_google_drive(self):
         """Disconnect Google Drive account."""
@@ -935,13 +983,18 @@ class SettingsScreen(QWidget):
             main_window.show_dashboard()
 
     def _load_inventory_settings(self):
-        markup_setting = AppConfig.get_setting("global_markup", "0.0") # Changed to AppConfig.get_setting
-        if markup_setting: # No need to check .value if it returns a string
-            self.markup_input.setValue(float(markup_setting))
-            
-        threshold_setting = AppConfig.get_setting("low_stock_threshold", "10") # Changed to AppConfig.get_setting
-        if threshold_setting: # No need to check .value if it returns a string
-            self.low_stock_input.setValue(float(threshold_setting))
+        try:
+            markup_setting = AppConfig.get_setting("global_markup", "0.0")
+            if markup_setting is not None:
+                self.markup_input.setValue(float(markup_setting))
+                
+            threshold_setting = AppConfig.get_setting("low_stock_threshold", "10")
+            if threshold_setting is not None:
+                self.low_stock_input.setValue(float(threshold_setting))
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Formatting error in inventory settings: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error in _load_inventory_settings: {e}")
 
     def _load_pos_settings(self):
         business_name_setting = AppConfig.get_setting("business_name", "") # Changed to AppConfig.get_setting

@@ -36,6 +36,7 @@ class LicenseModal(QDialog):
         
         license_text = """
 INVENTORY MANAGEMENT SYSTEM - VERSION 1.0.0
+Author: Joachim Korang Amponsah | Build: 2026.03
 
 MIT LICENSE / AS-IS CLAUSE
 
@@ -96,9 +97,17 @@ class AboutScreen(QWidget):
         content_layout.setSpacing(25)
         content_layout.setAlignment(Qt.AlignTop)
 
-        # SECTION 1: User Roles
+        # SECTION 1: Developer Information
+        dev_card = self._create_section_card(
+            "👨‍💻 Developer Information",
+            "This application was designed and developed by **Joachim Korang Amponsah (Xluljoey)**.\n\n"
+            "Focused on creating high-performance, secure, and user-centric business solutions."
+        )
+        content_layout.addWidget(dev_card)
+
+        # SECTION 2: User Roles
         roles_card = self._create_section_card(
-            "👥 User Roles & Permissions",
+            "👥 System User Roles",
             "This application utilizes a strict Role-Based Access Control (RBAC) architecture "
             "to ensure business security and data integrity.\n\n"
             "• Admin (Business Owner): Exclusive administrative rights. Only Admins can perform "

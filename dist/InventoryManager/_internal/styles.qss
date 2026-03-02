@@ -1,0 +1,64 @@
+/* styles.qss - Windows-Native Elegant Aesthetic */
+
+QMainWindow { 
+    background-color: #F3F4F6; 
+}
+
+QWidget#CardContainer { 
+    background-color: #FFFFFF; 
+    border: 1px solid #E5E7EB; 
+    border-radius: 12px; 
+}
+
+QLabel { 
+    color: #111827; 
+    font-family: "Segoe UI Variable Text", "Segoe UI", "Arial"; 
+}
+
+QPushButton { 
+    background-color: #3B82F6; 
+    color: white; 
+    border-radius: 8px; 
+    padding: 8px 16px; 
+    font-weight: 600; 
+}
+
+/* Base styles for other widgets to maintain consistency */
+QWidget {
+    font-family: "Segoe UI Variable Text", "Segoe UI", "Arial";
+}
+
+QLineEdit {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 8px;
+    color: #111827;
+}
+
+QLineEdit:focus {
+    border: 2px solid #3B82F6;
+}
+
+QTableWidget {
+    gridline-color: #F3F4F6; /* Light grid lines */
+    background-color: #FFFFFF;
+    alternate-background-color: #F9FAFB; /* Zebra striping */
+    selection-background-color: #DBEAFE; /* Light blue for selection */
+    selection-color: #1E40AF; /* Darker blue text for selection */
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+}
+
+QHeaderView::section {
+    background-color: #F9FAFB;
+    padding: 12px; /* Increased padding for better spacing */
+    border: none;
+    border-bottom: 2px solid #E5E7EB; /* Bolder bottom border */
+    font-weight: bold;
+    color: #4B5563; /* Muted text color for headers */
+}
+
+QHeaderView::handle {
+    background-color: transparent;
+}

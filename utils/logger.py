@@ -37,11 +37,16 @@ logger.add(
 )
 
 # Add a handler for stdout for development/debugging visibility
-logger.add(
-    sys.stdout, 
-    level="DEBUG", # Log DEBUG and above to stdout
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-)
+# ONLY if sys.stdout is not None (prevents crash in bundled no-console mode)
+if sys.stdout is not None:
+    logger.add(
+        sys.stdout, 
+        level="DEBUG", # Log DEBUG and above to stdout
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+    )
+else:
+    # Optional: Log a message to the file that we are in no-console mode
+    logger.info("Running in No-Console mode. Stdout logging disabled.")
 
 # Global exception handler for unhandled exceptions (similar to task's exception_hook)
 def exception_hook(exctype, value, tb):

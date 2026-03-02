@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, 
                                QLineEdit, QPushButton, QLabel, QFrame, 
-                               QTabWidget, QTabBar, QSizePolicy, QStackedWidget)
+                               QTabWidget, QTabBar, QSizePolicy, QStackedWidget, QDialog)
 from PySide6.QtCore import Signal, Qt, QSize, QPropertyAnimation, QEasingCurve, QPoint
 from PySide6.QtGui import QFont, QPalette, QLinearGradient, QBrush, QPixmap
 
@@ -15,8 +15,9 @@ class LoginScreen(QWidget):
     # Signal emitted when login is successful
     login_successful = Signal(User)
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_user = None
         self.current_role = "sales_rep"  # Default to sales rep
         self.init_ui()
         
@@ -56,8 +57,14 @@ class LoginScreen(QWidget):
         
         # Company title
         from config.app_config import AppConfig # Temporarily import AppConfig to get CURRENCY_SYMBOL
-        store_name_setting = DatabaseService.get_setting("business_name")
-        store_name = store_name_setting.value if store_name_setting and store_name_setting.value.strip() else "INVENTORY SYSTEM"
+        
+        # DEFENSIVE: Handle case where DB isn't fully initialized or settings table is missing
+        try:
+            store_name_setting = DatabaseService.get_setting("business_name")
+            store_name = store_name_setting.value if store_name_setting and store_name_setting.value.strip() else "INVENTORY SYSTEM"
+        except Exception:
+            # Fallback to AppConfig or a default if DB fails
+            store_name = getattr(AppConfig, "BUSINESS_NAME", "INVENTORY SYSTEM")
         
         title_label = QLabel(store_name.upper())
         title_label.setObjectName("loginTitle")
@@ -152,9 +159,6 @@ class LoginScreen(QWidget):
         card_layout.addWidget(QLabel("Password"))
         card_layout.addWidget(self.password_input)
         
-        # Remove the admin PIN field since we're using the same password field for both roles
-        # The authentication logic will determine if the user has admin rights
-        
         # Login button
         self.login_button = QPushButton("CONTINUE")
         self.login_button.setObjectName("primaryButton")
@@ -198,19 +202,15 @@ class LoginScreen(QWidget):
             self.show_error("Please enter password")
             return
         
-        # The password field is used for both roles - the authentication logic determines access
-        
-        # For the initial implementation, we'll use a default admin user
-        # In the database initialization, we'll create admin with password "admin123"
         username = "admin" if self.current_role == "admin" else "sales_rep"
         
         # Attempt to authenticate user
         user = AuthService.authenticate_user(username, password)
         
         if user:
-            # Check if the user role matches the selected role
             if user.role == self.current_role:
                 # Login successful
+                self.current_user = user
                 self.login_successful.emit(user)
                 return
             else:

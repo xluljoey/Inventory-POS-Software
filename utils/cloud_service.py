@@ -21,10 +21,15 @@ class CloudService:
     """Service to handle Google Drive Backup and Restore operations."""
     
     def __init__(self):
+        from config.app_config import AppConfig
         self.creds = None
         self.service = None
-        self.token_path = 'token.json'
-        self.creds_path = 'credentials.json' # User must provide this from Google Console
+        # Use persistent AppData path for token.json
+        self.base_dir = Path(AppConfig.get_base_dir())
+        # Ensure the directory exists
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.token_path = str(self.base_dir / 'token.json')
+        self.creds_path = 'credentials.json' # User must provide this in the app directory
 
     def authenticate(self):
         """Authenticates the user with Google Drive."""
