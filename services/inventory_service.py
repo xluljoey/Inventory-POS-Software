@@ -353,7 +353,7 @@ class InventoryService:
         return DatabaseService.get_restock_history(limit)
 
     @staticmethod
-    def create_product(name: str, selling_price: float, category: str, unit_type: str, weight_per_unit: float, initial_stock: float) -> int:
+    def create_product(name: str, selling_price: float, category: str, unit_type: str, weight_per_unit: float, initial_stock: float, cost_price: float = 0.0) -> int:
         """Create a new product with basic fields"""
         # Note: weight_per_unit is mentioned in requirements but not in current Product model.
         # We can store it in notes or just ignore if it's not in schema yet.
@@ -371,7 +371,7 @@ class InventoryService:
             'category': category,
             'unit_type': unit_type,
             'quantity': initial_stock,
-            'cost_price': selling_price, # Initially set cost=selling as per requirement
+            'cost_price': cost_price if cost_price > 0 else selling_price,
             'selling_price': selling_price,
             'reorder_level': 5,
             'supplier': None,
