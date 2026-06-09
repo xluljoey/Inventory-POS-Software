@@ -1,9 +1,10 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                                QLabel, QPushButton, QFrame, QTableWidget, 
                                QTableWidgetItem, QLineEdit, QComboBox, 
-                               QHeaderView, QAbstractItemView, QMessageBox, QCompleter)
+                               QHeaderView, QAbstractItemView, QMessageBox, QCompleter, QDialog)
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QFont, QColor
+from loguru import logger
 
 from database.models import User, Sale, SaleItem
 from services.sales_service import SalesService
@@ -481,7 +482,19 @@ class SalesScreen(QWidget):
         try:
             total_text = self.cart_total_label.text().split("GHS")[1].strip().replace(",", "")
             total = float(total_text)
-            tender = float(self.tender_input.text() or "0")
+            
+            # Robust tender parsing
+            tender_text = self.tender_input.text().strip()
+            if not tender_text:
+                tender = 0.0
+            else:
+                try:
+                    tender = float(tender_text)
+                except ValueError:
+                    # Ignore invalid partial input (like '-')
+                    self.change_label.setText("Change Due: GHS --")
+                    return
+
             change = tender - total
             self.change_label.setText(f"Change Due: GHS {max(0, change):.2f}")
             self.change_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {'#27AE60' if change >= 0 else '#E74C3C'};")
