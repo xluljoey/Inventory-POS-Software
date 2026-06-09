@@ -30,7 +30,7 @@ class BusinessInfoPage(QWizardPage):
         self.store_name = QLineEdit()
         self.address = QLineEdit()
         self.currency = QComboBox()
-        self.currency.addItems(["GHS (GH₵)", "USD ($)"])
+        self.currency.addItems(["GHS (GHS)", "USD ($)"])
         
         layout.addRow("Store Name*:", self.store_name)
         layout.addRow("Store Address:", self.address)

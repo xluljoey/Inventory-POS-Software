@@ -279,7 +279,7 @@ class InventoryService:
         if DatabaseService.update_product(product):
             DatabaseService.create_activity(
                 'price_change', 
-                f"Price updated for {product.name}: GH₵ {old_price:.2f} -> GH₵ {new_price:.2f}",
+                f"Price updated for {product.name}: GHS {old_price:.2f} -> GHS {new_price:.2f}",
                 user
             )
             return True
@@ -296,7 +296,7 @@ class InventoryService:
         if DatabaseService.update_product(product):
             DatabaseService.create_activity(
                 'price_change', 
-                f"Cost updated for {product.name}: GH₵ {old_cost:.2f} -> GH₵ {new_cost:.2f}",
+                f"Cost updated for {product.name}: GHS {old_cost:.2f} -> GHS {new_cost:.2f}",
                 user
             )
             return True

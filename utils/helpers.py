@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 import json
 
-def format_currency(amount: float, currency_symbol: str = "GHµ") -> str:
+def format_currency(amount: float, currency_symbol: str = "GHS") -> str:
     """Format a number as currency"""
     return f"{currency_symbol}{amount:,.2f}"
 

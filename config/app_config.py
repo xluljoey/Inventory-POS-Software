@@ -8,7 +8,8 @@ class AppConfig:
     
     # Business settings
     BUSINESS_NAME = "Inventory Management System"
-    CURRENCY_SYMBOL = "GH₵"  # Updated to Ghana Cedi as requested
+    CURRENCY_SYMBOL = "GHS"
+  # Updated to Ghana Cedi as requested
     TAX_RATE = 0.0  # Default to 0%, can be updated in settings
     RECEIPT_HEADER = "Thank you for your purchase!"
     RECEIPT_FOOTER = "We appreciate your business"

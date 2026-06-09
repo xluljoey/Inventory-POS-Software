@@ -83,9 +83,9 @@ class DashboardScreen(QWidget):
         self.standard_inventory_card = self.create_kpi_card("Expired Products", "0", "#2C3E50", self.show_expired_products_dialog)
         
         # Sales & Customer Overview Cards (Visible to all)
-        self.total_sales_card = self.create_kpi_card("Today's Revenue", "GH₵0", "#192A56", self.go_to_daily_sales)
+        self.total_sales_card = self.create_kpi_card("Today's Revenue", "GHS0", "#192A56", self.go_to_daily_sales)
         self.total_orders_card = self.create_kpi_card("Total Orders", "0", "#192A56")
-        self.avg_sales_card = self.create_kpi_card("Average Sales", "GH₵0", "#4A76D9")
+        self.avg_sales_card = self.create_kpi_card("Average Sales", "GHS0", "#4A76D9")
         self.total_customers_card = self.create_kpi_card("Total Customers", "0", "#00BCD4", self.go_to_customers)
         
         # Add cards to grid
@@ -457,9 +457,9 @@ class DashboardScreen(QWidget):
             total_customers = len(all_customers) if all_customers else 0
             
             # Update overview cards
-            self.total_sales_card.value_label.setText(f"GH₵{today_sales:,.2f}")
+            self.total_sales_card.value_label.setText(f"GHS{today_sales:,.2f}")
             self.total_orders_card.value_label.setText(str(total_orders))
-            self.avg_sales_card.value_label.setText(f"GH₵{avg_sales:,.2f}")
+            self.avg_sales_card.value_label.setText(f"GHS{avg_sales:,.2f}")
             self.total_customers_card.value_label.setText(str(total_customers))
             
             # --- UPDATE RECENT ACTIVITY (Combined Sales and System Activities) ---
@@ -483,7 +483,7 @@ class DashboardScreen(QWidget):
                 customer_name = sale.get('customer_name', 'Walk-in')
                 combined_activities.append({
                     'date': sale['date'],
-                    'description': f"New Sale to {customer_name}: GH₵ {sale['total_amount']:.2f}",
+                    'description': f"New Sale to {customer_name}: GHS {sale['total_amount']:.2f}",
                     'user': sale['cashier_user'],
                     'type': 'sale'
                 })

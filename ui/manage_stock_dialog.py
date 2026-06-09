@@ -73,7 +73,7 @@ class ManageStockDialog(QDialog):
         # Update Price Section
         self.manage_price_input = QDoubleSpinBox()
         self.manage_price_input.setMaximum(999999.99)
-        self.manage_price_input.setPrefix("GH₵ ")
+        self.manage_price_input.setPrefix("GHS ")
         self.manage_price_input.setFixedHeight(35)
         
         update_price_btn = QPushButton("Update Price")
@@ -102,7 +102,7 @@ class ManageStockDialog(QDialog):
         # Update Cost Section (Added)
         self.manage_cost_input = QDoubleSpinBox()
         self.manage_cost_input.setMaximum(999999.99)
-        self.manage_cost_input.setPrefix("GH₵ ")
+        self.manage_cost_input.setPrefix("GHS ")
         self.manage_cost_input.setFixedHeight(35)
         
         update_cost_btn = QPushButton("Update Cost")
@@ -187,13 +187,13 @@ class ManageStockDialog(QDialog):
         # Cost Price (Added)
         self.add_cost_input = QDoubleSpinBox()
         self.add_cost_input.setMaximum(999999.99)
-        self.add_cost_input.setPrefix("GH₵ ")
-        form_layout.addRow("Cost Price (GH₵)*:", self.add_cost_input)
+        self.add_cost_input.setPrefix("GHS ")
+        form_layout.addRow("Cost Price (GHS)*:", self.add_cost_input)
 
         self.add_price_input = QDoubleSpinBox()
         self.add_price_input.setMaximum(999999.99)
-        self.add_price_input.setPrefix("GH₵ ")
-        form_layout.addRow("Selling Price (GH₵)*:", self.add_price_input)
+        self.add_price_input.setPrefix("GHS ")
+        form_layout.addRow("Selling Price (GHS)*:", self.add_price_input)
         
         self.add_unit_combo = QComboBox()
         self.add_unit_combo.setObjectName("inputField")

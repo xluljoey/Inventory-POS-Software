@@ -693,7 +693,7 @@ class PayDebtDialog(QDialog):
         debt_frame = QFrame()
         debt_frame.setStyleSheet("background-color: #FFF3E0; border-radius: 6px; padding: 10px;")
         debt_layout = QHBoxLayout(debt_frame)
-        debt_label = QLabel(f"Current Debt: GH₵ {self.current_debt:,.2f}")
+        debt_label = QLabel(f"Current Debt: GHS {self.current_debt:,.2f}")
         debt_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #E65100;")
         debt_label.setAlignment(Qt.AlignCenter)
         debt_layout.addWidget(debt_label)
@@ -701,7 +701,7 @@ class PayDebtDialog(QDialog):
         
         # Input Field
         self.amount_input = QDoubleSpinBox()
-        self.amount_input.setPrefix("GH₵ ")
+        self.amount_input.setPrefix("GHS ")
         self.amount_input.setMaximum(999999.99)
         self.amount_input.setDecimals(2)
         self.amount_input.setStyleSheet("""
@@ -844,10 +844,10 @@ class ProductDetailsDialog(QDialog):
         add_row("Category:", self.product_data.get('category', 'N/A'))
         add_row("Unit Type:", self.product_data.get('unit_type', 'pieces'))
         add_row("Quantity:", f"{self.product_data.get('quantity', 0)} {self.product_data.get('unit_type', 'pieces')}")
-        add_row("Selling Price:", f"GH₵ {self.product_data.get('selling_price', 0):.2f}")
+        add_row("Selling Price:", f"GHS {self.product_data.get('selling_price', 0):.2f}")
         
         if self.show_cost:
-            add_row("Cost Price:", f"GH₵ {self.product_data.get('cost_price', 0):.2f}")
+            add_row("Cost Price:", f"GHS {self.product_data.get('cost_price', 0):.2f}")
             # Calculate Margin
             cp = self.product_data.get('cost_price', 0)
             sp = self.product_data.get('selling_price', 0)

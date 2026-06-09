@@ -484,7 +484,7 @@ class SettingsScreen(QWidget):
         self.address_input = QLineEdit()
         form_layout.addRow("Address:", self.address_input)
         self.currency_combo = QComboBox()
-        self.currency_combo.addItems(["GHS (GH₵)", "USD ($)"])
+        self.currency_combo.addItems(["GHS (GHS)", "USD ($)"])
         form_layout.addRow("Currency:", self.currency_combo)
         layout.addWidget(card)
         

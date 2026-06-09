@@ -211,7 +211,7 @@ class ReportsScreen(QWidget):
         top_row = QHBoxLayout()
         top_row.setSpacing(10)
         
-        self.total_sales_card = self.create_summary_card("Total Sales", "GH₵0.00", "#4caf50")
+        self.total_sales_card = self.create_summary_card("Total Sales", "GHS0.00", "#4caf50")
         self.total_sales_card.setFixedWidth(160)
         top_row.addWidget(self.total_sales_card)
         
@@ -219,7 +219,7 @@ class ReportsScreen(QWidget):
         self.total_transactions_card.setFixedWidth(140)
         top_row.addWidget(self.total_transactions_card)
         
-        self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
+        self.avg_transaction_card = self.create_summary_card("Avg. Transaction", "GHS0.00", "#ff9800")
         self.avg_transaction_card.setFixedWidth(160)
         top_row.addWidget(self.avg_transaction_card)
         
@@ -267,7 +267,7 @@ class ReportsScreen(QWidget):
         self.out_of_stock_card.setFixedSize(120, 70)
         top_row.addWidget(self.out_of_stock_card)
         
-        self.total_value_card = self.create_summary_card("Total Value", "GH₵0.00", "#4caf50")
+        self.total_value_card = self.create_summary_card("Total Value", "GHS0.00", "#4caf50")
         self.total_value_card.setFixedSize(150, 70)
         top_row.addWidget(self.total_value_card)
         
@@ -343,15 +343,15 @@ class ReportsScreen(QWidget):
         top_row = QHBoxLayout()
         top_row.setSpacing(10)
         
-        self.total_revenue_card = self.create_summary_card("Total Revenue", "GH₵0.00", "#4caf50")
+        self.total_revenue_card = self.create_summary_card("Total Revenue", "GHS0.00", "#4caf50")
         self.total_revenue_card.setFixedWidth(160)
         top_row.addWidget(self.total_revenue_card)
         
-        self.total_costs_card = self.create_summary_card("Total Costs", "GH₵0.00", "#f44336")
+        self.total_costs_card = self.create_summary_card("Total Costs", "GHS0.00", "#f44336")
         self.total_costs_card.setFixedWidth(160)
         top_row.addWidget(self.total_costs_card)
         
-        self.total_profit_card = self.create_summary_card("Total Profit", "GH₵0.00", "#9c27b0")
+        self.total_profit_card = self.create_summary_card("Total Profit", "GHS0.00", "#9c27b0")
         self.total_profit_card.setFixedWidth(160)
         top_row.addWidget(self.total_profit_card)
         
@@ -387,7 +387,7 @@ class ReportsScreen(QWidget):
         top_row = QHBoxLayout()
         top_row.setSpacing(10)
         
-        self.daily_total_sales_card = self.create_summary_card("Today's Revenue", "GH₵0.00", "#4caf50")
+        self.daily_total_sales_card = self.create_summary_card("Today's Revenue", "GHS0.00", "#4caf50")
         self.daily_total_sales_card.setFixedWidth(180)
         top_row.addWidget(self.daily_total_sales_card)
         
@@ -395,7 +395,7 @@ class ReportsScreen(QWidget):
         self.daily_transactions_card.setFixedWidth(120)
         top_row.addWidget(self.daily_transactions_card)
         
-        self.daily_avg_transaction_card = self.create_summary_card("Avg. Transaction", "GH₵0.00", "#ff9800")
+        self.daily_avg_transaction_card = self.create_summary_card("Avg. Transaction", "GHS0.00", "#ff9800")
         self.daily_avg_transaction_card.setFixedWidth(180)
         top_row.addWidget(self.daily_avg_transaction_card)
         
@@ -571,9 +571,9 @@ class ReportsScreen(QWidget):
                 self.inventory_table.setItem(i, 1, QTableWidgetItem(p['sku']))
                 self.inventory_table.setItem(i, 2, QTableWidgetItem(p['category'] or "N/A"))
                 self.inventory_table.setItem(i, 3, QTableWidgetItem(str(p['quantity'])))
-                self.inventory_table.setItem(i, 4, QTableWidgetItem(f"GH₵{p['cost_price']:.2f}"))
-                self.inventory_table.setItem(i, 5, QTableWidgetItem(f"GH₵{p['selling_price']:.2f}"))
-                self.inventory_table.setItem(i, 6, QTableWidgetItem(f"GH₵{p['total_value']:.2f}"))
+                self.inventory_table.setItem(i, 4, QTableWidgetItem(f"GHS{p['cost_price']:.2f}"))
+                self.inventory_table.setItem(i, 5, QTableWidgetItem(f"GHS{p['selling_price']:.2f}"))
+                self.inventory_table.setItem(i, 6, QTableWidgetItem(f"GHS{p['total_value']:.2f}"))
                 status = "In Stock"
                 status_color = Qt.green
                 if p['quantity'] <= 0: 
@@ -655,9 +655,9 @@ class ReportsScreen(QWidget):
             
             self.financial_table.setRowCount(1)
             self.financial_table.setItem(0, 0, QTableWidgetItem(f"{start.date()} to {end.date()}"))
-            self.financial_table.setItem(0, 1, QTableWidgetItem(f"GH₵{rev:.2f}"))
-            self.financial_table.setItem(0, 2, QTableWidgetItem(f"GH₵{cost:.2f}"))
-            self.financial_table.setItem(0, 3, QTableWidgetItem(f"GH₵{profit:.2f}"))
+            self.financial_table.setItem(0, 1, QTableWidgetItem(f"GHS{rev:.2f}"))
+            self.financial_table.setItem(0, 2, QTableWidgetItem(f"GHS{cost:.2f}"))
+            self.financial_table.setItem(0, 3, QTableWidgetItem(f"GHS{profit:.2f}"))
             self.financial_table.setItem(0, 4, QTableWidgetItem(f"{margin:.2f}%"))
         except Exception as e:
             print(f"Financial load error: {e}")
@@ -820,7 +820,7 @@ class ReportsScreen(QWidget):
             for row in data:
                 for item in row:
                     # Fix character encoding error for Cedi symbol
-                    clean_item = str(item).replace("₵", "GHS")
+                    clean_item = str(item).replace("GHS", "GHS")
                     pdf.cell(col_width, 8, clean_item[:25], border=1)
                 pdf.ln()
                 
@@ -874,7 +874,7 @@ class ReportsScreen(QWidget):
             pdf.set_font("Arial", '', 8)
             for row in data:
                 for item in row:
-                    pdf.cell(col_width, 7, str(item).replace("₵", "GHS")[:25], border=1)
+                    pdf.cell(col_width, 7, str(item).replace("GHS", "GHS")[:25], border=1)
                 pdf.ln()
                 
             pdf.output(temp_pdf)

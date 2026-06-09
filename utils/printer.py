@@ -16,7 +16,8 @@ class ReceiptPrinter:
         business_name = config.BUSINESS_NAME
         receipt_header = config.RECEIPT_HEADER
         receipt_footer = config.RECEIPT_FOOTER
-        currency_symbol = "GHµ"
+        currency_symbol = "GHS"
+
         
         # Create receipt content
         receipt_lines = []

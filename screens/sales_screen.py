@@ -180,7 +180,7 @@ class SalesScreen(QWidget):
         totals_container.setStyleSheet("background-color: #F8F9FA; border-radius: 8px; padding: 10px;")
         totals_layout = QVBoxLayout(totals_container)
         
-        self.cart_total_label = QLabel("TOTAL: GH₵ 0.00")
+        self.cart_total_label = QLabel("TOTAL: GHS 0.00")
         self.cart_total_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #1976D2;")
         self.cart_total_label.setAlignment(Qt.AlignCenter)
         totals_layout.addWidget(self.cart_total_label)
@@ -231,7 +231,7 @@ class SalesScreen(QWidget):
         right_layout.addWidget(self.customer_combo)
         
         self.tender_input = QLineEdit()
-        self.tender_input.setPlaceholderText("Amount Tendered (GH₵)")
+        self.tender_input.setPlaceholderText("Amount Tendered (GHS)")
         self.tender_input.setFixedHeight(45)
         self.tender_input.textChanged.connect(self.on_tender_amount_changed)
         # Watermark style for placeholder
@@ -255,7 +255,7 @@ class SalesScreen(QWidget):
         right_layout.addWidget(self.tender_input)
         
         # Change Due
-        self.change_label = QLabel("Change Due: GH₵ 0.00")
+        self.change_label = QLabel("Change Due: GHS 0.00")
         self.change_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #27AE60;")
         right_layout.addWidget(self.change_label)
         
@@ -322,7 +322,7 @@ class SalesScreen(QWidget):
         for row, p in enumerate(products):
             self.product_table.setItem(row, 0, QTableWidgetItem(p["name"]))
             self.product_table.setItem(row, 1, QTableWidgetItem(p["sku"]))
-            self.product_table.setItem(row, 2, QTableWidgetItem(f"GH₵ {p['selling_price']:.2f}"))
+            self.product_table.setItem(row, 2, QTableWidgetItem(f"GHS {p['selling_price']:.2f}"))
             stock_item = QTableWidgetItem(str(int(p["quantity"])))
             if p["is_low_stock"]: stock_item.setForeground(QColor("#E74C3C"))
             self.product_table.setItem(row, 3, stock_item)
@@ -435,7 +435,7 @@ class SalesScreen(QWidget):
             self.cart_table.setCellWidget(row, 1, qty_container)
             
             # --- SUBTOTAL ---
-            sub_item = QTableWidgetItem(f"GH₵ {sub:.2f}")
+            sub_item = QTableWidgetItem(f"GHS {sub:.2f}")
             sub_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.cart_table.setItem(row, 2, sub_item)
 
@@ -455,7 +455,7 @@ class SalesScreen(QWidget):
             
             total += sub
         
-        self.cart_total_label.setText(f"TOTAL: GH₵ {total:,.2f}")
+        self.cart_total_label.setText(f"TOTAL: GHS {total:,.2f}")
         self.complete_sale_btn.setEnabled(total > 0)
         self.update_change_display()
 
@@ -479,11 +479,11 @@ class SalesScreen(QWidget):
 
     def update_change_display(self):
         try:
-            total_text = self.cart_total_label.text().split("GH₵")[1].strip().replace(",", "")
+            total_text = self.cart_total_label.text().split("GHS")[1].strip().replace(",", "")
             total = float(total_text)
             tender = float(self.tender_input.text() or "0")
             change = tender - total
-            self.change_label.setText(f"Change Due: GH₵ {max(0, change):.2f}")
+            self.change_label.setText(f"Change Due: GHS {max(0, change):.2f}")
             self.change_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {'#27AE60' if change >= 0 else '#E74C3C'};")
         except Exception as e:
             logger.error(f"Error updating change display: {e}")
@@ -494,7 +494,7 @@ class SalesScreen(QWidget):
             self.update_cart_display()
 
     def on_complete_sale_clicked(self):
-        total_text = self.cart_total_label.text().split("GH₵")[1].strip().replace(",", "")
+        total_text = self.cart_total_label.text().split("GHS")[1].strip().replace(",", "")
         total = float(total_text)
         
         # Validation: Restrict sales without payment unless a customer is selected

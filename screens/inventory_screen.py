@@ -343,8 +343,8 @@ class InventoryScreen(QWidget):
             self.product_table.setCellWidget(row, 3, quantity_widget)
             
             # Format prices with GHS currency
-            cost_item = QTableWidgetItem(f"GH₵ {product['cost_price']:.2f}")
-            selling_item = QTableWidgetItem(f"GH₵ {product['selling_price']:.2f}")
+            cost_item = QTableWidgetItem(f"GHS {product['cost_price']:.2f}")
+            selling_item = QTableWidgetItem(f"GHS {product['selling_price']:.2f}")
             cost_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             selling_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.product_table.setItem(row, 4, cost_item)
