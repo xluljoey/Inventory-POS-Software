@@ -96,8 +96,10 @@ class AuthService:
             return False
             
         # 2. Perform Reset
-        hashed_password, _ = AuthService.hash_password(new_password)
-        success = DatabaseService.update_user_password(target_user_id, hashed_password)
+        hashed_password, salt = AuthService.hash_password(new_password)
+        # Store in "salt$hash" format
+        salted_hash = f"{salt}${hashed_password}"
+        success = DatabaseService.update_user_password(target_user_id, salted_hash)
         if success:
             logger.info(f"Administrative password reset completed for User ID: {target_user_id} by {admin_user.username}")
         return success
@@ -114,8 +116,10 @@ class AuthService:
             return False
         
         # Hash and update new password
-        hashed_password, _ = AuthService.hash_password(new_password)
-        success = DatabaseService.update_user_password(user_id, hashed_password)
+        hashed_password, salt = AuthService.hash_password(new_password)
+        # Store in "salt$hash" format
+        salted_hash = f"{salt}${hashed_password}"
+        success = DatabaseService.update_user_password(user_id, salted_hash)
         if success:
             logger.info(f"Password changed for User ID: {user_id}")
         return success
@@ -127,5 +131,7 @@ class AuthService:
         if not user:
             return False
         
-        hashed_password, _ = AuthService.hash_password(new_password)
-        return DatabaseService.update_user_password(user.id, hashed_password)
+        hashed_password, salt = AuthService.hash_password(new_password)
+        # Store in "salt$hash" format
+        salted_hash = f"{salt}${hashed_password}"
+        return DatabaseService.update_user_password(user.id, salted_hash)

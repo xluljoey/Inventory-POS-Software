@@ -11,6 +11,7 @@ from services.inventory_service import InventoryService
 from services.customer_service import CustomerService
 from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog
 from datetime import datetime
+from utils.printer import ReceiptPrinter
 
 
 class SalesScreen(QWidget):
@@ -333,7 +334,8 @@ class SalesScreen(QWidget):
             self.customer_combo.addItem("Walk-in Customer", None)
             for c in customers:
                 self.customer_combo.addItem(c["name"], c["id"])
-        except: pass
+        except Exception as e:
+            logger.error(f"Failed to load customers in SalesScreen: {e}")
 
     def on_product_search_changed(self, text):
         filtered = [p for p in self.all_products if text.lower() in p["name"].lower() or text.lower() in p["sku"].lower()]
@@ -483,7 +485,8 @@ class SalesScreen(QWidget):
             change = tender - total
             self.change_label.setText(f"Change Due: GH₵ {max(0, change):.2f}")
             self.change_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {'#27AE60' if change >= 0 else '#E74C3C'};")
-        except: pass
+        except Exception as e:
+            logger.error(f"Error updating change display: {e}")
 
     def on_clear_cart_clicked(self):
         if self.cart_items and QMessageBox.question(self, "Clear Cart", "Clear all items?") == QMessageBox.Yes:
@@ -521,7 +524,17 @@ class SalesScreen(QWidget):
         }
         
         try:
-            if SalesService.create_sale(sale):
+            sale_id = SalesService.create_sale(sale)
+            if sale_id:
+                # Add ID for printing
+                sale['id'] = sale_id
+                
+                # POP UP RECEIPT FOR PRINTING
+                try:
+                    ReceiptPrinter.print_receipt(sale)
+                except Exception as print_err:
+                    logger.error(f"Receipt printing failed: {print_err}")
+                
                 CustomInfoDialog("Success", "Sale completed!", self).exec()
                 self.cart_items = []
                 self.tender_input.clear()

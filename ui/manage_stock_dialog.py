@@ -212,7 +212,7 @@ class ManageStockDialog(QDialog):
         self.add_category_combo = QComboBox()
         self.add_category_combo.setObjectName("inputField")
         self.add_category_combo.setView(QListView())
-        self.add_category_combo.addItems(["General", "Food", "Electronics", "Clothing", "Other"])
+        # self.add_category_combo.addItems(["General", "Food", "Electronics", "Clothing", "Other"]) # Removed hardcoded items
         form_layout.addRow("Category:", self.add_category_combo)
         
         layout.addWidget(card)
@@ -315,9 +315,31 @@ class ManageStockDialog(QDialog):
         
         return tab
 
+    def refresh_categories_list(self):
+        """Fetch categories from DB and update the add product combo"""
+        try:
+            categories = InventoryService.get_all_categories()
+            self.add_category_combo.clear()
+            if not categories:
+                self.add_category_combo.addItem("General")
+            else:
+                for cat in categories:
+                    self.add_category_combo.addItem(cat['name'])
+        except Exception as e:
+            logger.error(f"Failed to refresh categories: {e}")
+            self.add_category_combo.addItems(["General", "Food", "Electronics", "Clothing", "Other"])
+
     def refresh_products_list(self):
+        # Save current selections to restore them after refresh
+        current_manage_id = self.manage_product_combo.currentData()
+        current_arrival_id = self.arrival_product_combo.currentData()
+
         self.all_products = InventoryService.get_all_products()
         
+        # Block signals to prevent resetting other fields via currentIndexChanged
+        self.manage_product_combo.blockSignals(True)
+        self.arrival_product_combo.blockSignals(True)
+
         # Update Tab 1 Combo
         self.manage_product_combo.clear()
         for p in self.all_products:
@@ -327,6 +349,21 @@ class ManageStockDialog(QDialog):
         self.arrival_product_combo.clear()
         for p in self.all_products:
             self.arrival_product_combo.addItem(p['name'], p['id'])
+
+        # Restore selections
+        if current_manage_id:
+            idx = self.manage_product_combo.findData(current_manage_id)
+            if idx >= 0: self.manage_product_combo.setCurrentIndex(idx)
+        
+        if current_arrival_id:
+            idx = self.arrival_product_combo.findData(current_arrival_id)
+            if idx >= 0: self.arrival_product_combo.setCurrentIndex(idx)
+
+        self.manage_product_combo.blockSignals(False)
+        self.arrival_product_combo.blockSignals(False)
+        
+        # Also refresh categories while we are at it
+        self.refresh_categories_list()
 
     def on_manage_product_selected(self, index):
         if index < 0: return
