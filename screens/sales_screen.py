@@ -9,7 +9,7 @@ from database.models import User, Sale, SaleItem
 from services.sales_service import SalesService
 from services.inventory_service import InventoryService
 from services.customer_service import CustomerService
-from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog
+from ui.custom_dialog import CustomWarningDialog, CustomErrorDialog, CustomInfoDialog, CustomConfirmDialog
 from datetime import datetime
 from utils.printer import ReceiptPrinter
 
@@ -529,11 +529,13 @@ class SalesScreen(QWidget):
                 # Add ID for printing
                 sale['id'] = sale_id
                 
-                # POP UP RECEIPT FOR PRINTING
-                try:
-                    ReceiptPrinter.print_receipt(sale)
-                except Exception as print_err:
-                    logger.error(f"Receipt printing failed: {print_err}")
+                # ASK IF USER WANTS TO PRINT RECEIPT
+                confirm_dialog = CustomConfirmDialog("Print Receipt?", "Would you like to print a receipt for this transaction?", self)
+                if confirm_dialog.exec() == QDialog.Accepted:
+                    try:
+                        ReceiptPrinter.print_receipt(sale)
+                    except Exception as print_err:
+                        logger.error(f"Receipt printing failed: {print_err}")
                 
                 CustomInfoDialog("Success", "Sale completed!", self).exec()
                 self.cart_items = []
