@@ -9,6 +9,7 @@ from PySide6.QtGui import QFont, QColor
 from loguru import logger
 from datetime import datetime
 from pathlib import Path
+import sys
 
 from database.models import User
 from services.inventory_service import InventoryService
@@ -776,6 +777,7 @@ class SettingsScreen(QWidget):
         """Restart the PySide6 application."""
         import os
         import sys
+        from PySide6.QtWidgets import QApplication
         QApplication.quit()
         os.execl(sys.executable, sys.executable, *sys.argv)
 
@@ -813,11 +815,20 @@ class SettingsScreen(QWidget):
                 self.user_table.setItem(row, 1, QTableWidgetItem(user.full_name))
                 self.user_table.setItem(row, 2, QTableWidgetItem(user.role))
                 
+                # Actions Widget to prevent combining buttons
+                actions_widget = QWidget()
+                actions_layout = QHBoxLayout(actions_widget)
+                actions_layout.setContentsMargins(10, 4, 10, 4)
+                actions_layout.setAlignment(Qt.AlignCenter)
+
                 reset_btn = QPushButton("Reset Password")
-                reset_btn.setStyleSheet("padding: 5px; color: #1D4ED8;")
+                reset_btn.setFixedWidth(120)
+                reset_btn.setStyleSheet("padding: 5px; color: #1D4ED8; font-weight: 500;")
                 reset_btn.setCursor(Qt.PointingHandCursor)
                 reset_btn.clicked.connect(lambda checked=False, u=user: self._reset_password_dialog(u))
-                self.user_table.setCellWidget(row, 3, reset_btn)
+                
+                actions_layout.addWidget(reset_btn)
+                self.user_table.setCellWidget(row, 3, actions_widget)
         except Exception as e:
             logger.error(f"Failed to load users: {e}")
 
@@ -901,14 +912,18 @@ class SettingsScreen(QWidget):
                 # Actions
                 actions_widget = QWidget()
                 actions_layout = QHBoxLayout(actions_widget)
-                actions_layout.setContentsMargins(0,0,0,0)
-                
+                actions_layout.setContentsMargins(10, 4, 10, 4)
+                actions_layout.setSpacing(15)
+                actions_layout.setAlignment(Qt.AlignCenter)
+
                 edit_btn = QPushButton("✏️")
+                edit_btn.setFixedSize(32, 32)
                 edit_btn.setCursor(Qt.PointingHandCursor)
                 edit_btn.setToolTip("Edit Category")
                 edit_btn.clicked.connect(lambda c=False, r=row, cat=category: self._edit_category(cat))
-                
+
                 delete_btn = QPushButton("🗑️")
+                delete_btn.setFixedSize(32, 32)
                 delete_btn.setCursor(Qt.PointingHandCursor)
                 delete_btn.setToolTip("Delete Category")
                 delete_btn.clicked.connect(lambda c=False, r=row, cat_id=category['id']: self._delete_category(cat_id))
@@ -918,6 +933,7 @@ class SettingsScreen(QWidget):
                 self.category_table.setCellWidget(row, 2, actions_widget)
 
         except Exception as e:
+            logger.error(f"Failed to load categories: {e}")
             QMessageBox.critical(self, "Error", f"Failed to load categories: {str(e)}")
 
     def _add_category(self):
@@ -929,7 +945,7 @@ class SettingsScreen(QWidget):
                 self._load_category_data() # Refresh
             else:
                 QMessageBox.warning(self, "Validation Error", "Category name cannot be empty.")
-    
+
     def _edit_category(self, category_data):
         dialog = CategoryDialog(self, category_data)
         if dialog.exec() == QDialog.Accepted:
@@ -941,52 +957,28 @@ class SettingsScreen(QWidget):
             else:
                 QMessageBox.warning(self, "Validation Error", "Category name cannot be empty.")
 
-        def _delete_category(self, category_id):
+    def _delete_category(self, category_id):
+        # 1. Fetch category name
+        category = InventoryService.get_category_by_id(category_id)
+        if not category: return
+        
+        # 2. Check for linked products
+        with DatabaseService.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM products WHERE category = ?", (category['name'],))
+            count = cursor.fetchone()[0]
 
-            # 1. Fetch category name
+        if count > 0:
+            QMessageBox.warning(self, "Cannot Delete",
+                                f"This category is linked to {count} products. "
+                                "Please reassign or delete the products first.")
+            return
 
-            category = InventoryService.get_category_by_id(category_id)
+        reply = QMessageBox.question(self, "Delete Category",
+                                   f"Are you sure you want to delete category '{category['name']}'?",
+                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
-            if not category: return
-
-            
-
-            # 2. Check for linked products
-
-            with DatabaseService.get_connection() as conn:
-
-                cursor = conn.cursor()
-
-                cursor.execute("SELECT COUNT(*) FROM products WHERE category = ?", (category['name'],))
-
-                count = cursor.fetchone()[0]
-
-                
-
-            if count > 0:
-
-                QMessageBox.warning(self, "Cannot Delete", 
-
-                                    f"This category is linked to {count} products. "
-
-                                    "Please reassign or delete the products first.")
-
-                return
-
-    
-
-            reply = QMessageBox.question(self, 'Confirm Delete', 
-
-                                         f"Are you sure you want to delete '{category['name']}'?",
-
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-
-            if reply == QMessageBox.Yes:
-
-                InventoryService.delete_category(category_id)
-
-                self._load_category_data() # Refresh
-
-                self._refresh_bulk_categories()
-
-    
+        if reply == QMessageBox.Yes:
+            InventoryService.delete_category(category_id)
+            self._load_category_data() # Refresh
+            self._refresh_bulk_categories()

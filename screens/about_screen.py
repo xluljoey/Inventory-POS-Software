@@ -37,6 +37,8 @@ class LicenseModal(QDialog):
         license_text = """
 INVENTORY MANAGEMENT SYSTEM - VERSION 1.0.0
 
+DEVELOPED BY: JOACHIM KORANG AMPONSAH
+
 MIT LICENSE / AS-IS CLAUSE
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.
@@ -46,7 +48,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 DATA OWNERSHIP & PRIVACY:
 The user maintains 100% ownership of all data entered into this system. As an offline-first application, no data is transmitted to third-party servers. The developers do not have access to your inventory, sales, or customer records.
 
-(c) 2026 Inventory Management Systems. All local data is your property.
+(c) 2026 Joachim Korang Amponsah. All local data is your property.
         """
         self.text_area.setText(license_text.strip())
         layout.addWidget(self.text_area)
@@ -123,9 +125,15 @@ class AboutScreen(QWidget):
         content_layout.addWidget(security_card)
 
         # SECTION 3: Licensing Summary
+        from utils.licensing import LicenseManager
+        is_active, _ = LicenseManager.verify_license()
+        machine_id = LicenseManager.get_machine_id()
+        
         license_card = self._create_section_card(
             "📜 License & Ownership",
-            "Software provided 'as-is' with a focus on commercial reliability and local data ownership. "
+            f"Software developed by Joachim Korang Amponsah.\n\n"
+            f"Machine ID: {machine_id}\n"
+            f"Status: {'✅ Activated' if is_active else '❌ Unactivated'}\n\n"
             "You retain 100% control over your database files and local configuration."
         )
         

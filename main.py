@@ -36,6 +36,8 @@ from screens.settings_screen import SettingsScreen
 # Import Custom Navigation Bar
 from ui.navigation_bar import MainNavigationBar
 from ui.animated_stacked_widget import AnimatedStackedWidget
+from utils.licensing import LicenseManager
+from ui.activation_dialog import ActivationDialog
 
 
 class MainWindow(QMainWindow):
@@ -302,6 +304,14 @@ def main():
                     logger.error("Setup wizard accepted but no business name found. Emergency exit.")
                     sys.exit(1)
         
+        # --- LICENSE VERIFICATION ---
+        is_active, _ = LicenseManager.verify_license()
+        if not is_active:
+            activation_dialog = ActivationDialog()
+            if activation_dialog.exec() != ActivationDialog.Accepted:
+                print("Activation required. Exiting.")
+                sys.exit(0)
+
         app.setApplicationName("Inventory Management System")
         app.setApplicationVersion("1.0")
         

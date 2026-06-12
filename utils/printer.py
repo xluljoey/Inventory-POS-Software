@@ -10,13 +10,18 @@ class ReceiptPrinter:
     @staticmethod
     def generate_receipt(sale_data: Dict) -> str:
         """Generate a receipt as a string"""
+        from database.database import DatabaseService
         config = AppConfig()
         
-        # Get business settings
-        business_name = config.BUSINESS_NAME
+        # Get dynamic business settings from DB
+        business_name_setting = DatabaseService.get_setting("business_name")
+        business_name = business_name_setting.value if business_name_setting else config.BUSINESS_NAME
+        
+        currency_setting = DatabaseService.get_setting("currency_symbol")
+        currency_symbol = currency_setting.value if currency_setting else "GHS"
+        
         receipt_header = config.RECEIPT_HEADER
         receipt_footer = config.RECEIPT_FOOTER
-        currency_symbol = "GHS"
         
         # Create receipt content
         receipt_lines = []
