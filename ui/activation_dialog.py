@@ -111,4 +111,6 @@ class ActivationDialog(QDialog):
         else:
             QMessageBox.critical(self, "Activation Failed", 
                                 "The license key provided is invalid for this machine.\n"
-                                "Please contact Joachim Korang Amponsah for a valid key.")
+                                "Please contact Joachim Korang Amponsah for a valid key.\n\n"
+                                "Phone: +233598433482\n"
+                                "Email: jerryjoachim632@gmail.com")

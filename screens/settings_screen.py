@@ -223,7 +223,7 @@ class SettingsScreen(QWidget):
         self.sidebar_widget.setStyleSheet("""
             #Sidebar {
                 background-color: #FFFFFF;
-                border-right: 1px solid #E5E7EB;
+                border-right: 1 solid #E5E7EB;
             }
         """)
         self.sidebar_widget.setFixedWidth(240)
@@ -462,11 +462,17 @@ class SettingsScreen(QWidget):
         self.category_table = QTableWidget()
         self.category_table.setColumnCount(3)
         self.category_table.setHorizontalHeaderLabels(["Category Name", "Description", "Actions"])
-        self.category_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        
+        # STIFF TABLE FIX: Fixed widths, no stretching except for description
+        self.category_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.category_table.setColumnWidth(0, 200)
         self.category_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.category_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.category_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
+        self.category_table.setColumnWidth(2, 120)
+        
         self.category_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.category_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.category_table.setFixedHeight(400)
         layout.addWidget(self.category_table)
         
         return page
@@ -796,7 +802,16 @@ class SettingsScreen(QWidget):
         self.user_table = QTableWidget()
         self.user_table.setColumnCount(4)
         self.user_table.setHorizontalHeaderLabels(["Username", "Full Name", "Role", "Actions"])
-        self.user_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        
+        # STIFF TABLE FIX: Fixed widths for Security table
+        self.user_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.user_table.setColumnWidth(0, 150)
+        self.user_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.user_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
+        self.user_table.setColumnWidth(2, 150)
+        self.user_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
+        self.user_table.setColumnWidth(3, 140)
+
         self.user_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.user_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.user_table.setFixedHeight(300)
@@ -815,7 +830,7 @@ class SettingsScreen(QWidget):
                 self.user_table.setItem(row, 1, QTableWidgetItem(user.full_name))
                 self.user_table.setItem(row, 2, QTableWidgetItem(user.role))
                 
-                # Actions Widget to prevent combining buttons
+                # Actions Widget with Blue themed button
                 actions_widget = QWidget()
                 actions_layout = QHBoxLayout(actions_widget)
                 actions_layout.setContentsMargins(10, 4, 10, 4)
@@ -823,7 +838,20 @@ class SettingsScreen(QWidget):
 
                 reset_btn = QPushButton("Reset Password")
                 reset_btn.setFixedWidth(120)
-                reset_btn.setStyleSheet("padding: 5px; color: #1D4ED8; font-weight: 500;")
+                reset_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #EBF5FF;
+                        color: #1D4ED8;
+                        border: 1px solid #BFDBFE;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        font-weight: 600;
+                        font-size: 11px;
+                    }
+                    QPushButton:hover {
+                        background-color: #DBEAFE;
+                    }
+                """)
                 reset_btn.setCursor(Qt.PointingHandCursor)
                 reset_btn.clicked.connect(lambda checked=False, u=user: self._reset_password_dialog(u))
                 
@@ -909,23 +937,43 @@ class SettingsScreen(QWidget):
                 self.category_table.setItem(row, 0, QTableWidgetItem(category['name']))
                 self.category_table.setItem(row, 1, QTableWidgetItem(category.get('description') or ''))
                 
-                # Actions
+                # Actions Widget with Professional Color Coded Buttons
                 actions_widget = QWidget()
                 actions_layout = QHBoxLayout(actions_widget)
-                actions_layout.setContentsMargins(10, 4, 10, 4)
-                actions_layout.setSpacing(15)
+                actions_layout.setContentsMargins(5, 4, 5, 4)
+                actions_layout.setSpacing(10)
                 actions_layout.setAlignment(Qt.AlignCenter)
 
+                # Blue Edit Button
                 edit_btn = QPushButton("✏️")
                 edit_btn.setFixedSize(32, 32)
                 edit_btn.setCursor(Qt.PointingHandCursor)
                 edit_btn.setToolTip("Edit Category")
+                edit_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #EFF6FF;
+                        color: #1D4ED8;
+                        border: 1px solid #BFDBFE;
+                        border-radius: 6px;
+                    }
+                    QPushButton:hover { background-color: #DBEAFE; }
+                """)
                 edit_btn.clicked.connect(lambda c=False, r=row, cat=category: self._edit_category(cat))
 
+                # Red Delete Button
                 delete_btn = QPushButton("🗑️")
                 delete_btn.setFixedSize(32, 32)
                 delete_btn.setCursor(Qt.PointingHandCursor)
                 delete_btn.setToolTip("Delete Category")
+                delete_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #FEF2F2;
+                        color: #DC2626;
+                        border: 1px solid #FECACA;
+                        border-radius: 6px;
+                    }
+                    QPushButton:hover { background-color: #FEE2E2; }
+                """)
                 delete_btn.clicked.connect(lambda c=False, r=row, cat_id=category['id']: self._delete_category(cat_id))
 
                 actions_layout.addWidget(edit_btn)
@@ -962,20 +1010,22 @@ class SettingsScreen(QWidget):
         category = InventoryService.get_category_by_id(category_id)
         if not category: return
         
-        # 2. Check for linked products
+        # 2. STRICT REASSIGNMENT CHECK: Check for linked products
         with DatabaseService.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM products WHERE category = ?", (category['name'],))
             count = cursor.fetchone()[0]
 
         if count > 0:
-            QMessageBox.warning(self, "Cannot Delete",
-                                f"This category is linked to {count} products. "
-                                "Please reassign or delete the products first.")
+            msg = (f"STRICT REQUIREMENT: The category '{category['name']}' is currently assigned to {count} product(s).\n\n"
+                   "You CANNOT delete this category until all products have been reassigned to a different category.\n\n"
+                   "Please go to Inventory and update these products before trying again.")
+            QMessageBox.critical(self, "Deletion Blocked", msg)
             return
 
+        # Standard confirmation for empty category
         reply = QMessageBox.question(self, "Delete Category",
-                                   f"Are you sure you want to delete category '{category['name']}'?",
+                                   f"Are you sure you want to delete the empty category '{category['name']}'?",
                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
