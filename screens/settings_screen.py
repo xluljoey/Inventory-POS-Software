@@ -452,20 +452,44 @@ class SettingsScreen(QWidget):
                 self.category_table.setItem(row, 1, QTableWidgetItem(category.get('description') or ''))
                 
                 actions_widget = QWidget()
-                actions_widget.setFixedWidth(160)
+                actions_widget.setFixedWidth(170)
                 actions_layout = QHBoxLayout(actions_widget)
-                actions_layout.setContentsMargins(0, 0, 0, 0)
+                actions_layout.setContentsMargins(5, 0, 5, 0)
                 actions_layout.setSpacing(10)
                 actions_layout.setAlignment(Qt.AlignCenter)
 
-                edit_btn = QPushButton("✏️")
-                edit_btn.setFixedSize(40, 40)
-                edit_btn.setStyleSheet("background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px;")
+                # Blue EDIT Button
+                edit_btn = QPushButton("EDIT")
+                edit_btn.setFixedSize(70, 35)
+                edit_btn.setCursor(Qt.PointingHandCursor)
+                edit_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #EFF6FF;
+                        color: #1D4ED8;
+                        border: 1px solid #BFDBFE;
+                        border-radius: 6px;
+                        font-weight: bold;
+                        font-size: 10px;
+                    }
+                    QPushButton:hover { background-color: #DBEAFE; }
+                """)
                 edit_btn.clicked.connect(lambda c=False, cat=category: self._edit_category(cat))
 
-                delete_btn = QPushButton("🗑️")
-                delete_btn.setFixedSize(40, 40)
-                delete_btn.setStyleSheet("background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px;")
+                # Red DELETE Button
+                delete_btn = QPushButton("DELETE")
+                delete_btn.setFixedSize(75, 35)
+                delete_btn.setCursor(Qt.PointingHandCursor)
+                delete_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #FEF2F2;
+                        color: #DC2626;
+                        border: 1px solid #FECACA;
+                        border-radius: 6px;
+                        font-weight: bold;
+                        font-size: 10px;
+                    }
+                    QPushButton:hover { background-color: #FEE2E2; }
+                """)
                 delete_btn.clicked.connect(lambda c=False, cat_id=category['id']: self._delete_category(cat_id))
 
                 actions_layout.addWidget(edit_btn)
