@@ -59,6 +59,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Inventory Management System")
         self.setGeometry(100, 100, 1400, 900)
         
+        # --- WINDOW ICON ---
+        icon_path = resource_path("app_icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
         # Enable window maximization and proper sizing
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
         self.setMinimumSize(1200, 800)  # Set minimum size
@@ -271,6 +276,17 @@ class MainWindow(QMainWindow):
         self.customers_screen.load_customer_data()
 
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 def main():
     """Main application entry point"""
     print("Starting main application...")
@@ -290,6 +306,12 @@ def main():
         
         print("Creating QApplication...")
         app = QApplication(sys.argv)
+
+        # --- GLOBAL APP ICON ---
+        icon_path = resource_path("app_icon.ico")
+        if os.path.exists(icon_path):
+            app_icon = QIcon(icon_path)
+            app.setWindowIcon(app_icon)
         
         if is_first_run:
             from ui.setup_wizard import SetupWizard
