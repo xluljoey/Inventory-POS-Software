@@ -54,7 +54,30 @@ class InventoryScreen(QWidget):
         """)
         header_layout.addWidget(title_label)
         
-        # Add "Manage Stock" button (admin only) - Moved next to title for visibility
+        # Status Filter (New)
+        self.status_filter = QComboBox()
+        self.status_filter.addItems(["All Items", "In Stock Only", "Out of Stock"])
+        self.status_filter.setFixedWidth(150)
+        self.status_filter.setFixedHeight(40)
+        self.status_filter.setStyleSheet("""
+            QComboBox {
+                border: 2px solid #1976D2;
+                border-radius: 20px;
+                padding: 0 15px;
+                background: white;
+                font-weight: bold;
+                color: #1976D2;
+            }
+            QComboBox::drop-down { border: none; }
+            QComboBox::down-arrow {
+                image: none; border-left: 5px solid transparent; border-right: 5px solid transparent;
+                border-top: 5px solid #1976D2; margin-right: 10px;
+            }
+        """)
+        self.status_filter.currentTextChanged.connect(self.on_filter_changed)
+        header_layout.addWidget(self.status_filter)
+        
+        # Add "Manage Stock" button (admin only)
         self.manage_stock_btn = QPushButton("📦 Manage Stock")
         self.manage_stock_btn.setMinimumWidth(180)
         self.manage_stock_btn.setStyleSheet("""
@@ -380,20 +403,34 @@ class InventoryScreen(QWidget):
             self.product_table.setCellWidget(row, 6, actions_widget)
     
     def on_search_changed(self, text):
-        """Filter products based on search text"""
-        if not text:
-            self.display_products(self.all_products)
-        else:
-            filtered_products = [
-                p for p in self.all_products
-                if text.lower() in p["name"].lower() or text.lower() in p["sku"].lower()
-            ]
-            self.display_products(filtered_products)
+        """Filter products based on search text and status filter"""
+        self.apply_combined_filters()
 
-    def on_filter_changed(self):
-        """Filter products based on selected filters"""
-        # Since we removed filter dropdowns in new design, this method is simplified
-        self.display_products(self.all_products)
+    def on_filter_changed(self, filter_text):
+        """Filter products based on status (In Stock/Out of Stock)"""
+        self.apply_combined_filters()
+
+    def apply_combined_filters(self):
+        """Apply both search text and status filter to the product list"""
+        search_text = self.search_input.text().lower()
+        status_text = self.status_filter.currentText()
+        
+        filtered = self.all_products
+        
+        # 1. Apply Status Filter
+        if status_text == "In Stock Only":
+            filtered = [p for p in filtered if p.get('quantity', 0) > 0]
+        elif status_text == "Out of Stock":
+            filtered = [p for p in filtered if p.get('quantity', 0) <= 0]
+            
+        # 2. Apply Search Filter
+        if search_text:
+            filtered = [
+                p for p in filtered 
+                if search_text in p["name"].lower() or search_text in p["sku"].lower()
+            ]
+            
+        self.display_products(filtered)
 
     def on_add_product_clicked(self):
         """Handle add product button click - check role"""

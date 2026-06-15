@@ -127,6 +127,10 @@ class DashboardScreen(QWidget):
         self.inventory_btn = self.create_action_button("Inventory", "#1976D2")
         self.inventory_btn.clicked.connect(self.on_inventory_clicked)
         buttons_layout.addWidget(self.inventory_btn)
+
+        self.in_stock_btn = self.create_action_button("In Stock", "#00897B")
+        self.in_stock_btn.clicked.connect(self.on_in_stock_clicked)
+        buttons_layout.addWidget(self.in_stock_btn)
         
         self.sales_btn = self.create_action_button("New Sale", "#4CAF50")
         self.sales_btn.clicked.connect(self.on_sales_clicked)
@@ -373,6 +377,14 @@ class DashboardScreen(QWidget):
         """Handle inventory button click"""
         if self.main_window:
             self.main_window.show_inventory()
+
+    def on_in_stock_clicked(self):
+        """Handle in-stock button click - navigate and filter"""
+        if self.main_window:
+            self.main_window.show_inventory()
+            # Set the status filter to 'In Stock Only'
+            if hasattr(self.main_window.inventory_screen, 'status_filter'):
+                self.main_window.inventory_screen.status_filter.setCurrentText("In Stock Only")
     
     def on_manage_stock_clicked(self):
         """Handle manage stock button click"""
