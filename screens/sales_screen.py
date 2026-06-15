@@ -525,6 +525,24 @@ class SalesScreen(QWidget):
                                 "Walk-in customers must provide full payment to complete the sale.\n"
                                 "Alternatively, select a customer to allow credit transactions.")
             return
+            
+        # CREDIT LIMIT CHECK
+        if customer_id and tender_amount < total:
+            unpaid_amount = total - tender_amount
+            customer = CustomerService.get_customer_by_id(customer_id)
+            if customer:
+                current_balance = customer.get('outstanding_balance', 0.0)
+                credit_limit = customer.get('credit_limit', 0.0)
+                
+                if (current_balance + unpaid_amount) > credit_limit:
+                    available = max(0, credit_limit - current_balance)
+                    QMessageBox.critical(self, "Credit Limit Exceeded", 
+                                       f"This sale would exceed the customer's credit limit.\n\n"
+                                       f"Credit Limit: GHS {credit_limit:,.2f}\n"
+                                       f"Current Balance: GHS {current_balance:,.2f}\n"
+                                       f"Available Credit: GHS {available:,.2f}\n\n"
+                                       f"Required for this sale: GHS {unpaid_amount:,.2f}")
+                    return
         
         sale = {
             "date": datetime.now().isoformat(),
