@@ -323,8 +323,8 @@ class ReportsScreen(QWidget):
         self.customer_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.customer_table.setShowGrid(False)
         self.customer_table.setMinimumHeight(700)
-        self.customer_table.setColumnCount(6)
-        self.customer_table.setHorizontalHeaderLabels(["Name", "Email", "Phone", "Amount Paid", "Balance", "Status"])
+        self.customer_table.setColumnCount(7)
+        self.customer_table.setHorizontalHeaderLabels(["Name", "Email", "Phone", "Amount Paid", "Balance", "Credit Limit", "Status"])
         self.customer_table.setAlternatingRowColors(True)
         self.customer_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.customer_table.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -347,6 +347,10 @@ class ReportsScreen(QWidget):
         self.total_revenue_card.setFixedWidth(160)
         top_row.addWidget(self.total_revenue_card)
         
+        self.total_cash_card = self.create_summary_card("Cash Collected", "GHS0.00", "#2E7D32")
+        self.total_cash_card.setFixedWidth(160)
+        top_row.addWidget(self.total_cash_card)
+        
         self.total_costs_card = self.create_summary_card("Total Costs", "GHS0.00", "#f44336")
         self.total_costs_card.setFixedWidth(160)
         top_row.addWidget(self.total_costs_card)
@@ -367,8 +371,8 @@ class ReportsScreen(QWidget):
         self.financial_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.financial_table.setShowGrid(False)
         self.financial_table.setMinimumHeight(700)
-        self.financial_table.setColumnCount(5)
-        self.financial_table.setHorizontalHeaderLabels(["Date", "Revenue", "Costs", "Profit", "Profit Margin"])
+        self.financial_table.setColumnCount(6)
+        self.financial_table.setHorizontalHeaderLabels(["Date", "Revenue", "Cash", "Costs", "Profit", "Margin"])
         self.financial_table.setAlternatingRowColors(True)
         self.financial_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.financial_table.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -513,7 +517,6 @@ class ReportsScreen(QWidget):
             self.avg_transaction_card.value_label.setText(f"{self.get_currency_symbol()}{avg_transaction:.2f}")
             self.top_product_card.value_label.setText(top_product)
             
-            # --- POPULATE TABLE (Itemized rows) ---
             all_rows = []
             for sale in sales_data:
                 for item in sale['items']:
@@ -533,13 +536,10 @@ class ReportsScreen(QWidget):
                 up_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.sales_table.setItem(row_idx, 3, up_item)
                 
-                # Total (Paid) column
                 total_item = QTableWidgetItem(f"{self.get_currency_symbol()}{item['subtotal']:.2f}")
                 total_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                
                 if sale.get('amount_paid', 0.0) < sale['total_amount']:
                     total_item.setForeground(Qt.red)
-                
                 self.sales_table.setItem(row_idx, 4, total_item)
                 
                 customer_name = "Walk-in"
@@ -608,7 +608,6 @@ class ReportsScreen(QWidget):
                 self.customer_table.setItem(row, 1, QTableWidgetItem(customer['email'] or "N/A"))
                 self.customer_table.setItem(row, 2, QTableWidgetItem(customer['phone'] or "N/A"))
                 
-                # Amount Paid
                 amount_paid = CustomerService.get_total_paid(customer['id'])
                 paid_item = QTableWidgetItem(f"{self.get_currency_symbol()}{amount_paid:.2f}")
                 paid_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -616,9 +615,13 @@ class ReportsScreen(QWidget):
                 
                 balance_item = QTableWidgetItem(f"{self.get_currency_symbol()}{customer['outstanding_balance']:.2f}")
                 balance_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                if customer['outstanding_balance'] > customer['credit_limit']: 
+                if customer['outstanding_balance'] > 0: 
                     balance_item.setForeground(Qt.red)
                 self.customer_table.setItem(row, 4, balance_item)
+                
+                limit_item = QTableWidgetItem(f"{self.get_currency_symbol()}{customer['credit_limit']:.2f}")
+                limit_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.customer_table.setItem(row, 5, limit_item)
                 
                 status = "Active"
                 status_color = Qt.green
@@ -631,7 +634,7 @@ class ReportsScreen(QWidget):
                 
                 status_item = QTableWidgetItem(status)
                 status_item.setForeground(status_color)
-                self.customer_table.setItem(row, 5, status_item)
+                self.customer_table.setItem(row, 6, status_item)
         except Exception as e:
             print(f"Customer load error: {e}")
 
@@ -639,6 +642,7 @@ class ReportsScreen(QWidget):
         try:
             sales = SalesService.get_sales_by_date_range(start, end)
             rev = sum(s['total_amount'] for s in sales)
+            cash = sum(s.get('amount_paid', 0.0) for s in sales)
             cost = 0
             for s in sales:
                 for item in s['items']:
@@ -649,6 +653,7 @@ class ReportsScreen(QWidget):
             margin = (profit / rev * 100) if rev > 0 else 0
             
             self.total_revenue_card.value_label.setText(f"{self.get_currency_symbol()}{rev:.2f}")
+            self.total_cash_card.value_label.setText(f"{self.get_currency_symbol()}{cash:.2f}")
             self.total_costs_card.value_label.setText(f"{self.get_currency_symbol()}{cost:.2f}")
             self.total_profit_card.value_label.setText(f"{self.get_currency_symbol()}{profit:.2f}")
             self.profit_margin_card.value_label.setText(f"{margin:.2f}%")
@@ -656,9 +661,10 @@ class ReportsScreen(QWidget):
             self.financial_table.setRowCount(1)
             self.financial_table.setItem(0, 0, QTableWidgetItem(f"{start.date()} to {end.date()}"))
             self.financial_table.setItem(0, 1, QTableWidgetItem(f"GHS{rev:.2f}"))
-            self.financial_table.setItem(0, 2, QTableWidgetItem(f"GHS{cost:.2f}"))
-            self.financial_table.setItem(0, 3, QTableWidgetItem(f"GHS{profit:.2f}"))
-            self.financial_table.setItem(0, 4, QTableWidgetItem(f"{margin:.2f}%"))
+            self.financial_table.setItem(0, 2, QTableWidgetItem(f"GHS{cash:.2f}"))
+            self.financial_table.setItem(0, 3, QTableWidgetItem(f"GHS{cost:.2f}"))
+            self.financial_table.setItem(0, 4, QTableWidgetItem(f"GHS{profit:.2f}"))
+            self.financial_table.setItem(0, 5, QTableWidgetItem(f"{margin:.2f}%"))
         except Exception as e:
             print(f"Financial load error: {e}")
 
@@ -669,8 +675,11 @@ class ReportsScreen(QWidget):
             end = datetime.combine(today, datetime.max.time())
             sales = SalesService.get_sales_by_date_range(start, end)
             
-            total_sales = sum(sale['total_amount'] for sale in sales)
-            total_transactions = len(sales)
+            summary = SalesService.get_daily_sales_summary(today)
+            total_sales = summary.get('total_revenue', 0.0)
+            total_cash = summary.get('total_cash', 0.0)
+            total_transactions = summary.get('total_transactions', 0)
+            
             avg_transaction = total_sales / total_transactions if total_transactions > 0 else 0
             unique_customers = set(sale['customer_id'] for sale in sales if sale['customer_id'])
             
@@ -686,7 +695,7 @@ class ReportsScreen(QWidget):
                     if s['customer_id']:
                         c = CustomerService.get_customer_by_id(s['customer_id'])
                         if c: cname = c['name']
-                    rows.append((item['product_id'], item['product_name'], cname, item['quantity'], item['subtotal'], s['payment_method']))
+                    rows.append((item['product_id'], item['product_name'], cname, item['quantity'], item['subtotal'], s.get('amount_paid', 0.0) if len(s['items']) == 1 else "See Sale"))
             
             self.daily_sales_table.setRowCount(len(rows))
             for i, r in enumerate(rows):
@@ -780,7 +789,6 @@ class ReportsScreen(QWidget):
         headers, data, name = self._scrape_table_data()
         if not headers: return
 
-        # Fetch Store Name for branding
         from database.database import DatabaseService
         store_setting = DatabaseService.get_setting("business_name")
         store_name = store_setting.value if store_setting else "Inventory System"
@@ -807,7 +815,7 @@ class ReportsScreen(QWidget):
             pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True, align='C')
             pdf.ln(10)
             
-            pdf.set_fill_color(25, 118, 210) # Navy Blue
+            pdf.set_fill_color(25, 118, 210) 
             pdf.set_text_color(255, 255, 255)
             pdf.set_font("Arial", 'B', 9)
             col_width = pdf.epw / len(headers)
@@ -819,7 +827,6 @@ class ReportsScreen(QWidget):
             pdf.set_font("Arial", '', 8)
             for row in data:
                 for item in row:
-                    # Fix character encoding error for Cedi symbol
                     clean_item = str(item).replace("GHS", "GHS")
                     pdf.cell(col_width, 8, clean_item[:25], border=1)
                 pdf.ln()
@@ -883,9 +890,9 @@ class ReportsScreen(QWidget):
             import platform
             if platform.system() == "Windows":
                 os.startfile(temp_pdf, "print")
-            elif platform.system() == "Darwin": # macOS
+            elif platform.system() == "Darwin": 
                 subprocess.run(["open", temp_pdf])
-            else: # Linux
+            else: 
                 subprocess.run(["xdg-open", temp_pdf])
                 
             QMessageBox.information(self, "Printing", "The report has been sent to your system viewer for printing.")

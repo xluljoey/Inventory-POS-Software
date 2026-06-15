@@ -84,8 +84,8 @@ class DashboardScreen(QWidget):
         
         # Sales & Customer Overview Cards (Visible to all)
         self.total_sales_card = self.create_kpi_card("Today's Revenue", "GHS0", "#192A56", self.go_to_daily_sales)
+        self.total_cash_card = self.create_kpi_card("Cash Collected", "GHS0", "#2E7D32")
         self.total_orders_card = self.create_kpi_card("Total Orders", "0", "#192A56")
-        self.avg_sales_card = self.create_kpi_card("Average Sales", "GHS0", "#4A76D9")
         self.total_customers_card = self.create_kpi_card("Total Customers", "0", "#00BCD4", self.go_to_customers)
         
         # Add cards to grid
@@ -95,8 +95,8 @@ class DashboardScreen(QWidget):
         stats_layout.addWidget(self.standard_inventory_card, 0, 3)
         
         stats_layout.addWidget(self.total_sales_card, 1, 0)
-        stats_layout.addWidget(self.total_orders_card, 1, 1)
-        stats_layout.addWidget(self.avg_sales_card, 1, 2)
+        stats_layout.addWidget(self.total_cash_card, 1, 1)
+        stats_layout.addWidget(self.total_orders_card, 1, 2)
         stats_layout.addWidget(self.total_customers_card, 1, 3)
         
         # Set column stretch for equal distribution
@@ -437,9 +437,10 @@ class DashboardScreen(QWidget):
             from datetime import datetime, timedelta
             today = datetime.now().date()
             
-            # Calculate today's sales
+            # Calculate today's sales and cash
             sales_summary = SalesService.get_daily_sales_summary(today)
             today_sales = sales_summary.get('total_revenue', 0.0) if sales_summary else 0.0
+            today_cash = sales_summary.get('total_cash', 0.0) if sales_summary else 0.0
             
             # Calculate total orders (simplified - using recent sales as proxy)
             recent_sales = SalesService.get_recent_sales(30)
@@ -458,8 +459,8 @@ class DashboardScreen(QWidget):
             
             # Update overview cards
             self.total_sales_card.value_label.setText(f"GHS{today_sales:,.2f}")
+            self.total_cash_card.value_label.setText(f"GHS{today_cash:,.2f}")
             self.total_orders_card.value_label.setText(str(total_orders))
-            self.avg_sales_card.value_label.setText(f"GHS{avg_sales:,.2f}")
             self.total_customers_card.value_label.setText(str(total_customers))
             
             # --- UPDATE RECENT ACTIVITY (Combined Sales and System Activities) ---

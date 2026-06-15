@@ -414,14 +414,14 @@ class DatabaseService:
             
             # Format date to match the database timestamp format for the day
             # Use date range comparison for better safety
-            # Handle both datetime and date objects by extracting components
             start_of_day = datetime(date.year, date.month, date.day, 0, 0, 0, 0)
             end_of_day = datetime(date.year, date.month, date.day, 23, 59, 59, 999999)
             
             cursor.execute('''
                 SELECT 
                     COUNT(*) as total_transactions,
-                    SUM(total_amount) as total_revenue
+                    SUM(total_amount) as total_revenue,
+                    SUM(amount_paid) as total_cash
                 FROM sales 
                 WHERE date >= ? AND date <= ?
             ''', (start_of_day.isoformat(), end_of_day.isoformat()))
@@ -430,9 +430,10 @@ class DatabaseService:
             if row:
                 return {
                     'total_transactions': row[0] or 0,
-                    'total_revenue': row[1] or 0.0
+                    'total_revenue': row[1] or 0.0,
+                    'total_cash': row[2] or 0.0
                 }
-            return {'total_transactions': 0, 'total_revenue': 0.0}
+            return {'total_transactions': 0, 'total_revenue': 0.0, 'total_cash': 0.0}
     
     # Customer payment operations
     @staticmethod
