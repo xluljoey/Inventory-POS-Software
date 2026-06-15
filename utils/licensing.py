@@ -3,10 +3,18 @@ import hashlib
 import os
 from pathlib import Path
 from loguru import logger
+from config.app_config import AppConfig
 
 class LicenseManager:
     """Handles software licensing and machine-specific activation"""
     
+    @staticmethod
+    def _get_license_file_path():
+        """Get the path to the license key file in AppData"""
+        data_dir = AppConfig.get_data_dir()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir / "license.key"
+
     @staticmethod
     def get_machine_id():
         """Retrieve a unique identifier for the current hardware"""
@@ -34,7 +42,7 @@ class LicenseManager:
     @staticmethod
     def verify_license():
         """Check if the software is activated on this machine"""
-        license_file = Path("license.key")
+        license_file = LicenseManager._get_license_file_path()
         if not license_file.exists():
             return False, "License key missing."
             
@@ -59,7 +67,12 @@ class LicenseManager:
         valid_key = LicenseManager.generate_license_hash(machine_id)
         
         if key.strip().upper() == valid_key:
-            with open("license.key", 'w') as f:
-                f.write(valid_key)
-            return True
+            license_file = LicenseManager._get_license_file_path()
+            try:
+                with open(license_file, 'w') as f:
+                    f.write(valid_key)
+                return True
+            except Exception as e:
+                logger.error(f"Failed to write license file: {e}")
+                return False
         return False
