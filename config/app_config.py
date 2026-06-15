@@ -32,11 +32,11 @@ class AppConfig:
             # Use AppData on Windows
             appdata = os.getenv('APPDATA')
             if appdata:
-                return Path(appdata) / "InventoryManagement"
+                return Path(appdata) / "InventoryPOS"
         else:
             # Use ~/.local/share on Linux
             home = Path.home()
-            return home / ".local" / "share" / "InventoryManagement"
+            return home / ".local" / "share" / "InventoryPOS"
         
         # Fallback to current directory if platform-specific directories fail
         return Path.cwd() / "data"
@@ -44,13 +44,9 @@ class AppConfig:
     @staticmethod
     def get_db_path():
         """Get the database file path"""
-        # TEMPORARY: Use local database file for debugging
-        return Path.cwd() / "inventory_management.db"
-        
-        # Original code (commented out for debugging):
-        # data_dir = AppConfig.get_data_dir()
-        # data_dir.mkdir(parents=True, exist_ok=True)
-        # return data_dir / "inventory.db"
+        data_dir = AppConfig.get_data_dir()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir / "inventory_management.db"
     
     @staticmethod
     def get_backup_dir():

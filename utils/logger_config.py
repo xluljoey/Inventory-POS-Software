@@ -4,11 +4,13 @@ from pathlib import Path
 from loguru import logger
 from PySide6.QtWidgets import QMessageBox
 
+from config.app_config import AppConfig
+
 def setup_logger():
     """Configure Loguru logger for the application"""
-    # 1. LOG FILING: Create logs folder and configure rotation
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
+    # 1. LOG FILING: Create logs folder in user-writable AppData and configure rotation
+    log_dir = AppConfig.get_data_dir() / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "app_activity.log"
 
     # Remove default handler

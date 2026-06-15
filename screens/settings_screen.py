@@ -547,8 +547,10 @@ class SettingsScreen(QWidget):
     def _handle_system_backup(self):
         import shutil
         db_path = AppConfig.get_db_path()
-        shutil.copy2(db_path, Path("logs") / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db")
-        QMessageBox.information(self, "Success", "Backup created in /logs")
+        backup_dir = AppConfig.get_data_dir() / "logs"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(db_path, backup_dir / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db")
+        QMessageBox.information(self, "Success", f"Backup created in {backup_dir}")
 
     def _link_google_drive(self):
         if self.cloud_service.authenticate():
