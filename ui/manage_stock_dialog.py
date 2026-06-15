@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                                QWidget, QLabel, QComboBox, QLineEdit, 
                                QPushButton, QFormLayout, QTableWidget, 
                                QTableWidgetItem, QHeaderView, QMessageBox,
-                               QFrame, QAbstractItemView, QDoubleSpinBox, QSpinBox, QListView, QDateEdit, QCheckBox)
+                               QFrame, QAbstractItemView, QDoubleSpinBox, QSpinBox, QListView, QDateEdit, QCheckBox, QScrollArea)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont
 from datetime import datetime, timedelta
@@ -155,6 +155,35 @@ class ManageStockDialog(QDialog):
         stock_layout.addWidget(self.manage_stock_input, 1)
         stock_layout.addWidget(update_stock_btn)
         form_layout.addRow("Correct Stock:", stock_widget)
+
+        # Update Category Section (Added)
+        self.manage_category_combo = QComboBox()
+        self.manage_category_combo.setObjectName("inputField")
+        self.manage_category_combo.setView(QListView())
+        self.manage_category_combo.setFixedHeight(35)
+        
+        update_cat_btn = QPushButton("Update Category")
+        update_cat_btn.setObjectName("primaryButton")
+        update_cat_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1976D2;
+                color: white;
+                font-weight: bold;
+                padding: 8px 16px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #1565C0;
+            }
+        """)
+        update_cat_btn.clicked.connect(self.update_category)
+        
+        cat_widget = QWidget()
+        cat_layout = QHBoxLayout(cat_widget)
+        cat_layout.setContentsMargins(0, 0, 0, 0)
+        cat_layout.addWidget(self.manage_category_combo, 1)
+        cat_layout.addWidget(update_cat_btn)
+        form_layout.addRow("New Category:", cat_widget)
         
         card_layout.addLayout(form_layout)
         layout.addWidget(card)
@@ -227,8 +256,17 @@ class ManageStockDialog(QDialog):
         return tab
 
     def create_arrivals_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        # MAIN WRAPPER to prevent layering issues
+        main_widget = QWidget()
+        main_layout = QVBoxLayout(main_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        
+        container = QWidget()
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
         
@@ -272,6 +310,7 @@ class ManageStockDialog(QDialog):
                 font-size: 13px; 
                 background-color: #FFFFFF;
                 min-height: 40px;
+                color: #333333;
             }
             QDateEdit:disabled {
                 background-color: #F5F5F5;
@@ -325,9 +364,11 @@ class ManageStockDialog(QDialog):
         self.history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.history_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.history_table.setMinimumHeight(350)
         self.history_table.setStyleSheet("""
             QTableWidget {
                 background-color: white;
+                color: #2C3E50;
                 border: 1px solid #E5E7EB;
                 border-radius: 8px;
                 gridline-color: #F3F4F6;
@@ -344,23 +385,34 @@ class ManageStockDialog(QDialog):
         """)
         layout.addWidget(self.history_table)
         
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
+        
         self.load_arrival_history()
         
-        return tab
+        return main_widget
 
     def refresh_categories_list(self):
         """Fetch categories from DB and update the add product combo"""
         try:
             categories = InventoryService.get_all_categories()
+            # Update Add Tab Combo
             self.add_category_combo.clear()
+            # Update Manage Tab Combo
+            self.manage_category_combo.clear()
+            
             if not categories:
                 self.add_category_combo.addItem("General")
+                self.manage_category_combo.addItem("General")
             else:
                 for cat in categories:
                     self.add_category_combo.addItem(cat['name'])
+                    self.manage_category_combo.addItem(cat['name'])
         except Exception as e:
             logger.error(f"Failed to refresh categories: {e}")
-            self.add_category_combo.addItems(["General", "Food", "Electronics", "Clothing", "Other"])
+            items = ["General", "Food", "Electronics", "Clothing", "Other"]
+            self.add_category_combo.addItems(items)
+            self.manage_category_combo.addItems(items)
 
     def refresh_products_list(self):
         # Save current selections to restore them after refresh
@@ -397,6 +449,9 @@ class ManageStockDialog(QDialog):
         
         # Also refresh categories while we are at it
         self.refresh_categories_list()
+        
+        # Trigger selection refresh to set category combo correctly
+        self.on_manage_product_selected(self.manage_product_combo.currentIndex())
 
     def on_manage_product_selected(self, index):
         if index < 0: return
@@ -404,6 +459,31 @@ class ManageStockDialog(QDialog):
         product = next((p for p in self.all_products if p['id'] == product_id), None)
         if product:
             self.manage_price_input.setValue(product['selling_price'])
+            self.manage_stock_input.setValue(product['quantity'])
+            self.manage_cost_input.setValue(product['cost_price'])
+            
+            # Set current category in combo
+            cat_idx = self.manage_category_combo.findText(product['category'] or "General")
+            if cat_idx >= 0:
+                self.manage_category_combo.setCurrentIndex(cat_idx)
+
+    def update_category(self):
+        product_id = self.manage_product_combo.currentData()
+        product_name = self.manage_product_combo.currentText()
+        if not product_id: return
+        
+        new_category = self.manage_category_combo.currentText()
+        
+        product_data = {
+            'id': product_id,
+            'category': new_category
+        }
+        
+        if InventoryService.update_product(product_data):
+            CustomInfoDialog("Success", f"Category for '{product_name}' updated to '{new_category}'", self).exec()
+            self.refresh_products_list()
+        else:
+            CustomErrorDialog("Error", "Failed to update category", self).exec()
             self.manage_stock_input.setValue(product['quantity'])
             self.manage_cost_input.setValue(product['cost_price'])
 

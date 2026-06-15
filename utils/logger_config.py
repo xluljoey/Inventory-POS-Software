@@ -16,8 +16,9 @@ def setup_logger():
     # Remove default handler
     logger.remove()
 
-    # Add stdout handler for development
-    logger.add(sys.stdout, level="DEBUG", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
+    # Add stdout handler for development (if available)
+    if sys.stdout:
+        logger.add(sys.stdout, level="DEBUG", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
 
     # Add file handler with rotation and retention
     logger.add(

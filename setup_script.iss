@@ -12,6 +12,7 @@ LicenseFile=license_agreement.txt
 AllowNoIcons=yes
 OutputDir=setup_output
 OutputBaseFilename=InventoryPOS_Setup
+SetupIconFile=app_icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -28,8 +29,8 @@ Source: "dist\InventoryPOS\*"; DestDir: "{app}"; Flags: ignoreversion recursesub
 ; The app will create a new one on startup if it doesn't exist.
 
 [Icons]
-Name: "{group}\Inventory POS"; Filename: "{app}\InventoryPOS.exe"
-Name: "{autodesktop}\Inventory POS"; Filename: "{app}\InventoryPOS.exe"; Tasks: desktopicon
+Name: "{group}\Inventory POS"; Filename: "{app}\InventoryPOS.exe"; IconFilename: "{app}\app_icon.ico"
+Name: "{autodesktop}\Inventory POS"; Filename: "{app}\InventoryPOS.exe"; Tasks: desktopicon; IconFilename: "{app}\app_icon.ico"
 
 [Run]
 Filename: "{app}\InventoryPOS.exe"; Description: "{cm:LaunchProgram,Inventory POS Software}"; Flags: nowait postinstall skipifsilent
