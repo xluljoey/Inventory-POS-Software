@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QStackedWidget,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QFormLayout,
     QLineEdit, QComboBox, QDoubleSpinBox, QCheckBox, QDialog, QDialogButtonBox,
-    QScrollArea, QMessageBox
+    QScrollArea, QMessageBox, QFileDialog, QListView
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont, QColor
@@ -330,7 +330,7 @@ class SettingsScreen(QWidget):
         h.setSectionResizeMode(QHeaderView.Fixed)
         self.category_table.setColumnWidth(0, 250)
         self.category_table.setColumnWidth(1, 400)
-        self.category_table.setColumnWidth(2, 160)
+        self.category_table.setColumnWidth(2, 180)
         h.setSectionsMovable(False)
         h.setSectionsClickable(False)
         
@@ -368,19 +368,115 @@ class SettingsScreen(QWidget):
         return page
 
     def _create_backup_restore_page(self):
+        """REFACTORED: High-Fidelity Backup & Restore Center."""
         page, layout = self._create_page_widget("Backup & Restore")
         self.cloud_service = CloudService()
-        self.cloud_status_label = QLabel("Cloud Status: Checking...")
-        layout.addWidget(self.cloud_status_label)
         
-        self.sys_backup_btn = QPushButton("Generate System Backup")
+        self.cloud_status_label = QLabel("Cloud Status: Checking...")
+        self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 10px;")
+        layout.addWidget(self.cloud_status_label)
+
+        local_title = QLabel("Local Database Operations")
+        local_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50;")
+        layout.addWidget(local_title)
+
+        cards_layout = QHBoxLayout()
+        cards_layout.setSpacing(20)
+        
+        # Backup Card
+        backup_card = self._create_card_frame()
+        backup_card.setFixedWidth(300)
+        backup_card_layout = QVBoxLayout(backup_card)
+        backup_card_layout.setAlignment(Qt.AlignCenter)
+        backup_card_layout.setContentsMargins(20, 20, 20, 20)
+        backup_card_layout.setSpacing(15)
+        
+        backup_icon = QLabel("📦")
+        backup_icon.setStyleSheet("font-size: 32px;")
+        backup_desc = QLabel("Create a local snapshot of your entire database (.db).")
+        backup_desc.setWordWrap(True)
+        backup_desc.setAlignment(Qt.AlignCenter)
+        backup_desc.setStyleSheet("color: #6B7280; font-size: 12px;")
+        
+        self.sys_backup_btn = QPushButton("BACKUP NOW")
+        self.sys_backup_btn.setFixedSize(160, 40)
+        self.sys_backup_btn.setStyleSheet("background-color: #059669; color: white; border-radius: 6px; font-weight: bold;")
         self.sys_backup_btn.clicked.connect(self._handle_system_backup)
-        layout.addWidget(self.sys_backup_btn)
+        
+        backup_card_layout.addWidget(backup_icon)
+        backup_card_layout.addWidget(backup_desc)
+        backup_card_layout.addWidget(self.sys_backup_btn, 0, Qt.AlignCenter)
+        
+        # Restore Card
+        restore_card = self._create_card_frame()
+        restore_card.setFixedWidth(300)
+        restore_card_layout = QVBoxLayout(restore_card)
+        restore_card_layout.setAlignment(Qt.AlignCenter)
+        restore_card_layout.setContentsMargins(20, 20, 20, 20)
+        restore_card_layout.setSpacing(15)
+        
+        restore_icon = QLabel("🔄")
+        restore_icon.setStyleSheet("font-size: 32px;")
+        restore_desc = QLabel("Restore your data from a previously saved .db file.")
+        restore_desc.setWordWrap(True)
+        restore_desc.setAlignment(Qt.AlignCenter)
+        restore_desc.setStyleSheet("color: #6B7280; font-size: 12px;")
+        
+        self.local_restore_btn = QPushButton("IMPORT .DB")
+        self.local_restore_btn.setFixedSize(160, 40)
+        self.local_restore_btn.setStyleSheet("background-color: #F59E0B; color: white; border-radius: 6px; font-weight: bold;")
+        self.local_restore_btn.clicked.connect(self._local_restore)
+        
+        restore_card_layout.addWidget(restore_icon)
+        restore_card_layout.addWidget(restore_desc)
+        restore_card_layout.addWidget(self.local_restore_btn, 0, Qt.AlignCenter)
+        
+        cards_layout.addWidget(backup_card)
+        cards_layout.addWidget(restore_card)
+        cards_layout.addStretch()
+        layout.addLayout(cards_layout)
+
+        cloud_title = QLabel("Cloud Sync (Google Drive)")
+        cloud_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50; margin-top: 20px;")
+        layout.addWidget(cloud_title)
+
+        cloud_card = self._create_card_frame()
+        cloud_layout = QVBoxLayout(cloud_card)
+        cloud_layout.setContentsMargins(25, 25, 25, 25)
+        
+        cloud_h_layout = QHBoxLayout()
+        cloud_h_layout.setSpacing(15)
         
         self.link_drive_btn = QPushButton("Link Google Drive")
-        self.link_drive_btn.clicked.connect(self._link_google_drive)
-        layout.addWidget(self.link_drive_btn)
+        self.link_drive_btn.setFixedSize(180, 40)
+        self.link_drive_btn.setStyleSheet("background-color: #2563EB; color: white; border-radius: 6px; font-weight: bold;")
         
+        self.unlink_drive_btn = QPushButton("Unlink Account")
+        self.unlink_drive_btn.setFixedSize(140, 40)
+        self.unlink_drive_btn.setStyleSheet("color: #DC2626; border: 1px solid #FECACA; border-radius: 6px; font-weight: 500;")
+        self.unlink_drive_btn.clicked.connect(self._unlink_google_drive)
+        
+        self.sync_cloud_btn = QPushButton("Sync to Cloud")
+        self.sync_cloud_btn.setFixedSize(160, 40)
+        self.sync_cloud_btn.setStyleSheet("background-color: #059669; color: white; border-radius: 6px; font-weight: bold;")
+        self.sync_cloud_btn.clicked.connect(self._sync_to_cloud)
+        
+        self.cloud_restore_btn = QPushButton("Cloud Restore")
+        self.cloud_restore_btn.setFixedSize(160, 40)
+        self.cloud_restore_btn.setStyleSheet("background-color: #F59E0B; color: white; border-radius: 6px; font-weight: bold;")
+        self.cloud_restore_btn.clicked.connect(self._restore_from_cloud)
+        
+        cloud_h_layout.addWidget(self.link_drive_btn)
+        cloud_h_layout.addWidget(self.unlink_drive_btn)
+        cloud_h_layout.addWidget(self.sync_cloud_btn)
+        cloud_h_layout.addWidget(self.cloud_restore_btn)
+        cloud_h_layout.addStretch()
+        
+        cloud_layout.addLayout(cloud_h_layout)
+        layout.addWidget(cloud_card)
+        
+        self._update_drive_status()
+        self.link_drive_btn.clicked.connect(self._link_google_drive)
         return page
 
     def _create_security_page(self):
@@ -389,13 +485,12 @@ class SettingsScreen(QWidget):
         self.user_table.setColumnCount(4)
         self.user_table.setHorizontalHeaderLabels(["Username", "Full Name", "Role", "Actions"])
         
-        # ULTRA-STIFF CONFIG
         h = self.user_table.horizontalHeader()
         h.setSectionResizeMode(QHeaderView.Fixed)
         self.user_table.setColumnWidth(0, 180)
         self.user_table.setColumnWidth(1, 300)
         self.user_table.setColumnWidth(2, 140)
-        self.user_table.setColumnWidth(3, 180)
+        self.user_table.setColumnWidth(3, 200)
         h.setSectionsMovable(False)
         h.setSectionsClickable(False)
         
@@ -415,15 +510,14 @@ class SettingsScreen(QWidget):
                 self.user_table.setItem(row, 1, QTableWidgetItem(user.full_name))
                 self.user_table.setItem(row, 2, QTableWidgetItem(user.role))
                 
-                # Actions Widget
                 actions_widget = QWidget()
-                actions_widget.setFixedWidth(180)
+                actions_widget.setFixedWidth(200)
                 actions_layout = QHBoxLayout(actions_widget)
-                actions_layout.setContentsMargins(0, 0, 0, 0)
+                actions_layout.setContentsMargins(10, 0, 10, 0)
                 actions_layout.setAlignment(Qt.AlignCenter)
 
                 reset_btn = QPushButton("RESET PASSWORD")
-                reset_btn.setFixedSize(150, 35)
+                reset_btn.setFixedSize(170, 35)
                 reset_btn.setStyleSheet("""
                     QPushButton {
                         background-color: #EFF6FF;
@@ -431,7 +525,7 @@ class SettingsScreen(QWidget):
                         border: 1px solid #BFDBFE;
                         border-radius: 6px;
                         font-weight: bold;
-                        font-size: 10px;
+                        font-size: 11px;
                     }
                     QPushButton:hover { background-color: #DBEAFE; }
                 """)
@@ -458,38 +552,14 @@ class SettingsScreen(QWidget):
                 actions_layout.setSpacing(10)
                 actions_layout.setAlignment(Qt.AlignCenter)
 
-                # Blue EDIT Button
                 edit_btn = QPushButton("EDIT")
                 edit_btn.setFixedSize(70, 35)
-                edit_btn.setCursor(Qt.PointingHandCursor)
-                edit_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #EFF6FF;
-                        color: #1D4ED8;
-                        border: 1px solid #BFDBFE;
-                        border-radius: 6px;
-                        font-weight: bold;
-                        font-size: 10px;
-                    }
-                    QPushButton:hover { background-color: #DBEAFE; }
-                """)
+                edit_btn.setStyleSheet("background-color: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 6px; font-weight: bold; font-size: 10px;")
                 edit_btn.clicked.connect(lambda c=False, cat=category: self._edit_category(cat))
 
-                # Red DELETE Button
                 delete_btn = QPushButton("DELETE")
                 delete_btn.setFixedSize(75, 35)
-                delete_btn.setCursor(Qt.PointingHandCursor)
-                delete_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #FEF2F2;
-                        color: #DC2626;
-                        border: 1px solid #FECACA;
-                        border-radius: 6px;
-                        font-weight: bold;
-                        font-size: 10px;
-                    }
-                    QPushButton:hover { background-color: #FEE2E2; }
-                """)
+                delete_btn.setStyleSheet("background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 6px; font-weight: bold; font-size: 10px;")
                 delete_btn.clicked.connect(lambda c=False, cat_id=category['id']: self._delete_category(cat_id))
 
                 actions_layout.addWidget(edit_btn)
@@ -518,16 +588,13 @@ class SettingsScreen(QWidget):
     def _delete_category(self, category_id):
         category = InventoryService.get_category_by_id(category_id)
         if not category: return
-        
         with DatabaseService.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM products WHERE category = ?", (category['name'],))
             count = cursor.fetchone()[0]
-
         if count > 0:
             QMessageBox.critical(self, "Deletion Blocked", f"STRICT REQUIREMENT: Category '{category['name']}' has {count} products. Reassign them first.")
             return
-
         if QMessageBox.question(self, "Delete", f"Delete empty category '{category['name']}'?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
             InventoryService.delete_category(category_id)
             self._load_category_data()
@@ -549,17 +616,98 @@ class SettingsScreen(QWidget):
         db_path = AppConfig.get_db_path()
         backup_dir = AppConfig.get_data_dir() / "logs"
         backup_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(db_path, backup_dir / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db")
+        dest_path = backup_dir / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        shutil.copy2(db_path, dest_path)
         QMessageBox.information(self, "Success", f"Backup created in {backup_dir}")
 
+    def _local_restore(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Backup", "", "Database Files (*.db)")
+        if not file_path: return
+        if QMessageBox.critical(self, "Warning", "OVERWRITE current data?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
+            import shutil
+            db_path = AppConfig.get_db_path()
+            shutil.copy2(db_path, f"{db_path}.bak")
+            shutil.copy2(file_path, db_path)
+            QMessageBox.information(self, "Success", "Restored. Restarting...")
+            self._restart_application()
+
     def _link_google_drive(self):
-        if self.cloud_service.authenticate():
-            self._update_drive_status()
-            QMessageBox.information(self, "Success", "Linked!")
+        try:
+            if self.cloud_service.authenticate():
+                self._update_drive_status()
+                QMessageBox.information(self, "Success", "Linked!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def _unlink_google_drive(self):
+        if QMessageBox.question(self, "Unlink", "Disconnect Drive?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
+            if self.cloud_service.unlink():
+                self._update_drive_status()
+                QMessageBox.information(self, "Success", "Unlinked.")
+
+    def _sync_to_cloud(self):
+        try:
+            db_path = AppConfig.get_db_path()
+            filename = self.cloud_service.upload_backup(db_path)
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            DatabaseService.update_setting("last_cloud_sync", now_str)
+            self._update_drive_status() 
+            QMessageBox.information(self, "Success", f"Uploaded: {filename}")
+        except Exception as e:
+            logger.error(f"Sync failed: {e}")
+            QMessageBox.critical(self, "Error", str(e))
+
+    def _restore_from_cloud(self):
+        try:
+            backups = self.cloud_service.list_backups()[:5]
+            if not backups:
+                QMessageBox.information(self, "No Backups", "No backups on Drive.")
+                return
+            from PySide6.QtWidgets import QInputDialog
+            items = [f"{b['name']} ({b['createdTime'][:10]})" for b in backups]
+            item, ok = QInputDialog.getItem(self, "Select Version", "Choose backup:", items, 0, False)
+            if ok and item:
+                admin_pass, ok_pass = QInputDialog.getText(self, "Security", "Enter Admin Password:", QLineEdit.Password)
+                if not ok_pass: return
+                if not AuthService.authenticate_user(self.current_user.username, admin_pass):
+                    QMessageBox.critical(self, "Error", "Invalid password.")
+                    return
+                selected = backups[items.index(item)]
+                if QMessageBox.critical(self, "Warning", "OVERWRITE current data?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
+                    db_path = AppConfig.get_db_path()
+                    if self.cloud_service.download_and_restore(selected['id'], db_path):
+                        QMessageBox.information(self, "Success", "Restored. Restarting...")
+                        self._restart_application()
+        except Exception as e:
+            logger.error(f"Cloud restore failed: {e}")
+            QMessageBox.critical(self, "Error", str(e))
+
+    def _restart_application(self):
+        import os
+        import sys
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
     def _update_drive_status(self):
         is_linked = self.cloud_service.is_linked()
-        self.cloud_status_label.setText(f"Cloud Status: {'Linked' if is_linked else 'Not Linked'}")
+        sync_setting = DatabaseService.get_setting("last_cloud_sync")
+        last_sync = sync_setting.value if sync_setting else "Never"
+        if is_linked:
+            email = self.cloud_service.get_user_email() or "Linked"
+            self.cloud_status_label.setText(f"Cloud Status: ✓ {email} | Last Sync: {last_sync}")
+            self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #16A34A; margin-bottom: 10px;")
+            self.link_drive_btn.setVisible(False)
+            self.unlink_drive_btn.setVisible(True)
+            self.sync_cloud_btn.setEnabled(True)
+            self.cloud_restore_btn.setEnabled(True)
+        else:
+            self.cloud_status_label.setText("Cloud Status: Not Linked")
+            self.cloud_status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 10px;")
+            self.link_drive_btn.setVisible(True)
+            self.unlink_drive_btn.setVisible(False)
+            self.sync_cloud_btn.setEnabled(False)
+            self.cloud_restore_btn.setEnabled(False)
 
     def _go_to_dashboard(self):
         main_window = self.window()
