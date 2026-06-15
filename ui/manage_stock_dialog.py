@@ -307,8 +307,41 @@ class ManageStockDialog(QDialog):
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(5)
         self.history_table.setHorizontalHeaderLabels(["Date/Time", "Product", "Before", "Added", "After"])
-        self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        
+        # STIFF TABLE REDESIGN (Recent Arrivals)
+        header = self.history_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Fixed)
+        self.history_table.setColumnWidth(0, 150) # Date/Time
+        header.setSectionResizeMode(1, QHeaderView.Stretch) # Product
+        self.history_table.setColumnWidth(2, 80) # Before
+        self.history_table.setColumnWidth(3, 80) # Added
+        self.history_table.setColumnWidth(4, 80) # After
+        
+        header.setSectionsMovable(False)
+        header.setSectionsClickable(False)
+        self.history_table.verticalHeader().setVisible(False)
+        self.history_table.verticalHeader().setDefaultSectionSize(40)
+        
         self.history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.history_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.history_table.setStyleSheet("""
+            QTableWidget {
+                background-color: white;
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
+                gridline-color: #F3F4F6;
+                font-size: 12px;
+            }
+            QHeaderView::section {
+                background-color: #F9FAFB;
+                padding: 8px;
+                border: none;
+                border-bottom: 2px solid #E5E7EB;
+                font-weight: bold;
+                color: #4B5563;
+            }
+        """)
         layout.addWidget(self.history_table)
         
         self.load_arrival_history()
